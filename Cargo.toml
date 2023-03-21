@@ -28,3 +28,8 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
 secrecy = { version = "0.8.0", features = ["serde"] }
 regex = "1.7.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+debug = true

@@ -1,13 +1,14 @@
-use crate::error::Error;
-use crate::Result;
 use actix_web::http::StatusCode;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use regex::RegexSet;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, Secret};
 use tokio_stream::StreamExt;
+
+use crate::error::Error;
+use crate::Result;
 
 // TODO: Just forward the request to the configured URL and don't try to verify anything. The verification should be done purely by the internal serivce
 // TODO: Do the conversion in specific converter structs

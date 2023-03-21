@@ -1,7 +1,8 @@
-use crate::error::Error;
 use reqwest::Url;
 use secrecy::Secret;
 use serde::{Deserialize, Deserializer};
+
+use crate::error::Error;
 
 const DEFAULT_SERVER_HOST: &str = "127.0.0.1";
 const DEFAULT_SERVER_PORT: u16 = 8080;

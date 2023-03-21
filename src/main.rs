@@ -1,16 +1,15 @@
-#[macro_use]
-extern crate tracing;
+use std::env;
+use std::str::FromStr;
+
+use reqwest_middleware::ClientBuilder;
+use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{filter, Layer};
 
 use cloudflare_access_webhook_redirect::config::Config;
 use cloudflare_access_webhook_redirect::server::{Server, WebHookData};
 use cloudflare_access_webhook_redirect::Result;
-use reqwest_middleware::ClientBuilder;
-use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
-use std::env;
-use std::str::FromStr;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{filter, Layer};
 
 const ENV_LOG_LEVEL: &str = "LOG_LEVEL";
 
