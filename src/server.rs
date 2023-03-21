@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use regex::RegexSet;
+use regex::{Regex, RegexSet};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
@@ -9,6 +9,41 @@ use tokio_stream::StreamExt;
 
 use crate::error::Error;
 use crate::Result;
+
+async fn get_token(
+    client: &ClientWithMiddleware,
+    url: &Url,
+    access_id: &Secret<String>,
+    access_secret: &Secret<String>,
+) -> Result<String> {
+    let access_id = HeaderValue::from_str(access_id.expose_secret()).unwrap();
+    let access_secret = HeaderValue::from_str(access_secret.expose_secret()).unwrap();
+
+    let response = client
+        .get(url.clone())
+        .header("CF-Access-Client-Id", access_id)
+        .header("CF-Access-Client-Secret", access_secret)
+        .send()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    println!("Response headers: {:?}", response.headers());
+
+    let regex = Regex::new(r"CF_Authorization=([\w\-.]+;)").unwrap();
+    response
+        .headers()
+        .get("set-cookie")
+        .map(|v| v.to_str().unwrap().to_string())
+        .and_then(|v| {
+            println!("Set-Cookie: \"{:?}\"", v);
+            regex
+                .captures(&v)
+                .and_then(|v| v.get(1))
+                .map(|v| v.as_str().to_string())
+        })
+        .ok_or_else(|| Error::custom("Failed to get token"))
+}
 
 // TODO: Just forward the request to the configured URL and don't try to verify anything. The verification should be done purely by the internal serivce
 // TODO: Do the conversion in specific converter structs
@@ -50,19 +85,19 @@ async fn handle_web_hook(
     }
 
     // Add cloudflare access headers
-    let access_id =
-        HeaderValue::from_str(web_hook_data.access_id.expose_secret()).map_err(|e| {
-            error!("Failed to convert access id to header value");
-            actix_web::error::ErrorBadRequest(e)
-        })?;
-    target_headers.append("CF-Access-Client-Id", access_id);
+    let token = get_token(
+        web_hook_data.client(),
+        web_hook_data.target_host(),
+        web_hook_data.access_id(),
+        web_hook_data.access_secret(),
+    )
+    .await
+    .unwrap();
 
-    let access_secret = HeaderValue::from_str(web_hook_data.access_secret.expose_secret())
-        .map_err(|e| {
-            error!("Failed to convert access secret to header value");
-            actix_web::error::ErrorBadRequest(e)
-        })?;
-    target_headers.append("CF-Access-Client-Secret", access_secret);
+    // Add cloudflare token header
+    target_headers.append("CF_Authorization", HeaderValue::from_str(&token).unwrap());
+
+    println!("Token: {:?}", token);
 
     println!("Headers: {:?}", target_headers);
     // Redirect request
@@ -70,7 +105,8 @@ async fn handle_web_hook(
     let response = web_hook_data
         .client
         .put(target_url)
-        .headers(target_headers)
+        // .bearer_auth(&token)
+        // .headers(target_headers)
         .body(body)
         .send()
         .await
