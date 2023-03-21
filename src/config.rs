@@ -2,7 +2,6 @@ use crate::error::Error;
 use reqwest::Url;
 use secrecy::Secret;
 use serde::{Deserialize, Deserializer};
-use std::str::FromStr;
 
 const DEFAULT_SERVER_HOST: &str = "127.0.0.1";
 const DEFAULT_SERVER_PORT: u16 = 8080;
@@ -28,9 +27,9 @@ pub struct ServerConfig {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct WebhookConfig {
-    #[serde(deserialize_with = "from_string_to_url")]
-    target: Url,
-    secret: Secret<String>,
+    #[serde(deserialize_with = "deserialize_url_from_string")]
+    target_base: Url,
+    // paths: Vec<String>,
 }
 
 impl Config {
@@ -51,6 +50,10 @@ impl Config {
 
     pub fn cloudflare(&self) -> &CloudFlareConfig {
         &self.cloudflare
+    }
+
+    pub fn webhook(&self) -> &WebhookConfig {
+        &self.webhook
     }
 }
 
@@ -76,15 +79,11 @@ impl ServerConfig {
 
 impl WebhookConfig {
     pub fn target(&self) -> &Url {
-        &self.target
-    }
-
-    pub fn secret(&self) -> &Secret<String> {
-        &self.secret
+        &self.target_base
     }
 }
 
-pub fn from_string_to_url<'de, D>(deserializer: D) -> Result<Url, D::Error>
+pub fn deserialize_url_from_string<'de, D>(deserializer: D) -> Result<Url, D::Error>
 where
     D: Deserializer<'de>,
 {

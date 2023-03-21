@@ -8,6 +8,8 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error("Serde error")]
     Serde(#[from] serde_json::Error),
+    #[error("Regex error")]
+    Regex(#[from] regex::Error),
     #[error("Config error")]
     Config(#[from] config::ConfigError),
     #[error("{0}")]

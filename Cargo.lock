@@ -378,6 +378,7 @@ dependencies = [
  "anyhow",
  "backtrace",
  "config",
+ "regex",
  "reqwest",
  "reqwest-middleware",
  "reqwest-tracing",

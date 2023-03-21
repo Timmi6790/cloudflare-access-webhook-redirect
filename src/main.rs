@@ -2,7 +2,10 @@
 extern crate tracing;
 
 use cloudflare_access_webhook_redirect::config::Config;
+use cloudflare_access_webhook_redirect::server::{Server, WebHookData};
 use cloudflare_access_webhook_redirect::Result;
+use reqwest_middleware::ClientBuilder;
+use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use std::env;
 use std::str::FromStr;
 use tracing_subscriber::layer::SubscriberExt;
@@ -20,6 +23,21 @@ async fn main() -> Result<()> {
     let config = Config::get_configurations()?;
 
     println!("{:#?}", config);
+
+    let server = Server::new(config.server().host().to_string(), config.server().port());
+
+    let client = ClientBuilder::new(reqwest::Client::new())
+        .with(TracingMiddleware::<SpanBackendWithUrl>::new())
+        .build();
+
+    let web_hook_data = WebHookData::new(
+        client,
+        config.webhook().target().clone(),
+        vec!["api/webhook".to_string(), "test/a/.*".to_string()],
+        config.cloudflare().client_id().clone(),
+        config.cloudflare().client_secret().clone(),
+    )?;
+    server.run_until_stopped(web_hook_data).await?;
 
     Ok(())
 }
