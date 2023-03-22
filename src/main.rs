@@ -1,4 +1,3 @@
-use reqwest::redirect::Policy;
 use std::env;
 use std::str::FromStr;
 
@@ -26,15 +25,9 @@ async fn main() -> Result<()> {
 
     let server = Server::new(config.server().host().to_string(), config.server().port());
 
-    let client = ClientBuilder::new(
-        reqwest::Client::builder()
-            .cookie_store(true)
-            .redirect(Policy::default())
-            .build()
-            .unwrap(),
-    )
-    .with(TracingMiddleware::<SpanBackendWithUrl>::new())
-    .build();
+    let client = ClientBuilder::new(reqwest::Client::new())
+        .with(TracingMiddleware::<SpanBackendWithUrl>::new())
+        .build();
 
     let web_hook_data = WebHookData::new(
         client,

@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use regex::{Regex, RegexSet};
+use regex::RegexSet;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
@@ -10,39 +10,11 @@ use tokio_stream::StreamExt;
 use crate::error::Error;
 use crate::Result;
 
-async fn get_token(
-    client: &ClientWithMiddleware,
-    url: &Url,
-    access_id: &Secret<String>,
-    access_secret: &Secret<String>,
-) -> Result<String> {
-    let access_id = HeaderValue::from_str(access_id.expose_secret()).unwrap();
-    let access_secret = HeaderValue::from_str(access_secret.expose_secret()).unwrap();
-
-    let response = client
-        .get(url.clone())
-        .header("CF-Access-Client-Id", access_id)
-        .header("CF-Access-Client-Secret", access_secret)
-        .send()
-        .await
-        .unwrap();
-
-    println!("Response: {:?}", response);
-    println!("Response headers: {:?}", response.headers());
-
-    let regex = Regex::new(r"CF_Authorization=([\w\-.]+;)").unwrap();
-    response
-        .headers()
-        .get("set-cookie")
-        .map(|v| v.to_str().unwrap().to_string())
-        .and_then(|v| {
-            println!("Set-Cookie: \"{:?}\"", v);
-            regex
-                .captures(&v)
-                .and_then(|v| v.get(1))
-                .map(|v| v.as_str().to_string())
-        })
-        .ok_or_else(|| Error::custom("Failed to get token"))
+fn is_valid_header_name(name: &str) -> bool {
+    return match name {
+        "host" => false,
+        _ => true,
+    };
 }
 
 // TODO: Just forward the request to the configured URL and don't try to verify anything. The verification should be done purely by the internal serivce
@@ -53,11 +25,6 @@ async fn handle_web_hook(
     path: web::Path<String>,
     web_hook_data: web::Data<WebHookData>,
 ) -> core::result::Result<HttpResponse, actix_web::Error> {
-    println!("Request: {:?}", request);
-    println!("Path: {:?}", path);
-
-    println!("Matched: {:?}", web_hook_data.is_allowed_path(&path));
-
     // Only allow specific paths
     if !web_hook_data.is_allowed_path(&path) {
         return Ok(HttpResponse::NotFound().finish());
@@ -80,33 +47,25 @@ async fn handle_web_hook(
     let mut target_headers: HeaderMap = HeaderMap::with_capacity(request.headers().capacity() + 2);
     for (key, value) in request.headers().iter() {
         if let Ok(value) = HeaderValue::from_bytes(value.as_bytes()) {
-            target_headers.append(key, value);
+            if is_valid_header_name(key.as_str()) {
+                target_headers.append(key, value);
+            }
         }
     }
 
-    // Add cloudflare access headers
-    let token = get_token(
-        web_hook_data.client(),
-        web_hook_data.target_host(),
-        web_hook_data.access_id(),
-        web_hook_data.access_secret(),
-    )
-    .await
-    .unwrap();
+    // Add Cloudflare Access headers
+    target_headers.append("CF-Access-Client-Id", web_hook_data.access_id.clone());
+    target_headers.append(
+        "CF-Access-Client-Secret",
+        web_hook_data.access_secret.clone(),
+    );
 
-    // Add cloudflare token header
-    target_headers.append("CF_Authorization", HeaderValue::from_str(&token).unwrap());
-
-    println!("Token: {:?}", token);
-
-    println!("Headers: {:?}", target_headers);
     // Redirect request
     let body = reqwest::Body::from(bytes.freeze());
     let response = web_hook_data
         .client
         .put(target_url)
-        // .bearer_auth(&token)
-        // .headers(target_headers)
+        .headers(target_headers)
         .body(body)
         .send()
         .await
@@ -139,8 +98,8 @@ pub struct WebHookData {
     client: ClientWithMiddleware,
     target_host: Url,
     allowed_paths: RegexSet,
-    access_id: Secret<String>,
-    access_secret: Secret<String>,
+    access_id: HeaderValue,
+    access_secret: HeaderValue,
 }
 
 impl WebHookData {
@@ -153,6 +112,10 @@ impl WebHookData {
     ) -> Result<Self> {
         let allowed_paths = RegexSet::new(allowed_paths)?;
 
+        let access_id = HeaderValue::from_str(access_id.expose_secret())
+            .map_err(|e| Error::custom("Failed to map access id to header value"))?;
+        let access_secret = HeaderValue::from_str(access_secret.expose_secret())
+            .map_err(|e| Error::custom("Failed to map access secret to header value"))?;
         Ok(Self {
             client,
             target_host,
@@ -180,11 +143,11 @@ impl WebHookData {
         self.allowed_paths.is_match(path)
     }
 
-    pub fn access_id(&self) -> &Secret<String> {
+    pub fn access_id(&self) -> &HeaderValue {
         &self.access_id
     }
 
-    pub fn access_secret(&self) -> &Secret<String> {
+    pub fn access_secret(&self) -> &HeaderValue {
         &self.access_secret
     }
 }
