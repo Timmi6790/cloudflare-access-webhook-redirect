@@ -1,3 +1,4 @@
+use crate::converter::ActixToReqwestConverter;
 use actix_web::http::StatusCode;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use regex::RegexSet;
@@ -5,20 +6,12 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, Secret};
-use tokio_stream::StreamExt;
 
 use crate::error::Error;
 use crate::Result;
 
-fn is_valid_header_name(name: &str) -> bool {
-    return match name {
-        "host" => false,
-        _ => true,
-    };
-}
-
-// TODO: Just forward the request to the configured URL and don't try to verify anything. The verification should be done purely by the internal serivce
-// TODO: Do the conversion in specific converter structs
+// TODO: Add query support
+// TODO: Add more method support?
 async fn handle_web_hook(
     mut payload: web::Payload,
     request: HttpRequest,
@@ -30,28 +23,18 @@ async fn handle_web_hook(
         return Ok(HttpResponse::NotFound().finish());
     }
 
-    // Get content
-    let mut bytes = web::BytesMut::new();
-    while let Some(item) = payload.next().await {
-        let item = item?;
-        bytes.extend_from_slice(&item);
-    }
-
     // Craft target url
     let target_url = web_hook_data.get_target_url(path.as_str()).map_err(|e| {
         error!("Failed to join URL: {}", e);
         actix_web::error::ErrorBadRequest(e)
     })?;
 
-    // Convert headers to reqwest headers
-    let mut target_headers: HeaderMap = HeaderMap::with_capacity(request.headers().capacity() + 2);
-    for (key, value) in request.headers().iter() {
-        if let Ok(value) = HeaderValue::from_bytes(value.as_bytes()) {
-            if is_valid_header_name(key.as_str()) {
-                target_headers.append(key, value);
-            }
-        }
-    }
+    // Convert body
+    let body = ActixToReqwestConverter::convert_body(&mut payload).await?;
+
+    // Convert headers
+    let mut target_headers: HeaderMap =
+        ActixToReqwestConverter::convert_headers(request.headers(), 2).await?;
 
     // Add Cloudflare Access headers
     target_headers.append("CF-Access-Client-Id", web_hook_data.access_id.clone());
@@ -61,7 +44,6 @@ async fn handle_web_hook(
     );
 
     // Redirect request
-    let body = reqwest::Body::from(bytes.freeze());
     let response = web_hook_data
         .client
         .put(target_url)
@@ -73,9 +55,6 @@ async fn handle_web_hook(
             error!("Failed to send request: {}", e);
             actix_web::error::ErrorBadRequest(e)
         })?;
-
-    // Craft response
-    println!("Response: {:?}", response);
 
     let response_code = StatusCode::from_u16(response.status().as_u16()).map_err(|e| {
         error!("Failed to convert response code: {}", e);
