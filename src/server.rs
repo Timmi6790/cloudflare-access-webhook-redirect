@@ -48,7 +48,7 @@ async fn handle_web_hook(
     // Redirect request
     let response = web_hook_data
         .client
-        .put(target_url)
+        .post(target_url)
         .headers(target_headers)
         .body(body)
         .send()
