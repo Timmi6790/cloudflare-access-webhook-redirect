@@ -92,9 +92,9 @@ impl WebHookData {
         let allowed_paths = RegexSet::new(allowed_paths)?;
 
         let access_id = HeaderValue::from_str(access_id.expose_secret())
-            .map_err(|e| Error::custom("Failed to map access id to header value"))?;
+            .map_err(|_| Error::custom("Failed to map access id to header value"))?;
         let access_secret = HeaderValue::from_str(access_secret.expose_secret())
-            .map_err(|e| Error::custom("Failed to map access secret to header value"))?;
+            .map_err(|_| Error::custom("Failed to map access secret to header value"))?;
         Ok(Self {
             client,
             target_host,
