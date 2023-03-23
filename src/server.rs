@@ -19,7 +19,9 @@ async fn handle_web_hook(
     web_hook_data: web::Data<WebHookData>,
 ) -> core::result::Result<HttpResponse, actix_web::Error> {
     // Only allow specific paths
+    info!("Received request for path: {}", path);
     if !web_hook_data.is_allowed_path(&path) {
+        debug!("Path not allowed: {}", path);
         return Ok(HttpResponse::NotFound().finish());
     }
 
@@ -56,19 +58,18 @@ async fn handle_web_hook(
             actix_web::error::ErrorBadRequest(e)
         })?;
 
+    // Parse reqwest response
     let response_code = StatusCode::from_u16(response.status().as_u16()).map_err(|e| {
         error!("Failed to convert response code: {}", e);
         actix_web::error::ErrorBadRequest(e)
     })?;
 
-    println!("Response headers: {:?}", response.headers());
-
     let response_body = response.text().await.map_err(|e| {
         error!("Failed to read response body: {}", e);
         actix_web::error::ErrorBadRequest(e)
     })?;
-    println!("Response content: {:?}", response_body);
 
+    debug!("Return response with code {}", response_code);
     let response = HttpResponse::build(response_code).body(response_body);
     Ok(response)
 }
@@ -142,7 +143,10 @@ impl Server {
     }
 
     pub async fn run_until_stopped(&self, web_hook_data: WebHookData) -> Result<()> {
-        info!("Starting server on {}:{}", self.host, self.port);
+        info!(
+            "Starting server on {}:{} with allowed paths {:#?}",
+            self.host, self.port, web_hook_data.allowed_paths
+        );
 
         let web_hook_data = web::Data::new(web_hook_data);
         let server = HttpServer::new(move || {

@@ -21,10 +21,7 @@ async fn main() -> Result<()> {
 
     let config = Config::get_configurations()?;
 
-    println!("{:#?}", config);
-
     let server = Server::new(config.server().host().to_string(), config.server().port());
-
     let client = ClientBuilder::new(reqwest::Client::new())
         .with(TracingMiddleware::<SpanBackendWithUrl>::new())
         .build();

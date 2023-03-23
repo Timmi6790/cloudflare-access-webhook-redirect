@@ -7,6 +7,7 @@ pub type ConverterResult<T> = anyhow::Result<T, ConverterError>;
 
 impl ActixToReqwestConverter {
     fn is_valid_header_name(name: &str) -> bool {
+        trace!("Checking for valid header name: {}", name);
         !matches!(name, "host")
     }
 
@@ -27,8 +28,6 @@ impl ActixToReqwestConverter {
         headers: &actix_web::http::header::HeaderMap,
         additional_headers: usize,
     ) -> ConverterResult<reqwest::header::HeaderMap> {
-        println!("Converting headers: {:?}", headers);
-
         let mut target_headers: reqwest::header::HeaderMap =
             reqwest::header::HeaderMap::with_capacity(headers.capacity() + additional_headers);
         headers
