@@ -30,13 +30,18 @@ pub struct ServerConfig {
 pub struct WebhookConfig {
     #[serde(deserialize_with = "deserialize_url_from_string")]
     target_base: Url,
-    // paths: Vec<String>,
+    paths: Vec<String>,
 }
 
 impl Config {
     pub fn get_configurations() -> crate::Result<Self> {
         config::Config::builder()
-            .add_source(config::Environment::default())
+            .add_source(
+                config::Environment::default()
+                    .list_separator(", ")
+                    .with_list_parse_key("webhook.paths")
+                    .try_parsing(true),
+            )
             .set_default("server.host", DEFAULT_SERVER_HOST)?
             .set_default("server.port", DEFAULT_SERVER_PORT)?
             .build()
@@ -81,6 +86,10 @@ impl ServerConfig {
 impl WebhookConfig {
     pub fn target(&self) -> &Url {
         &self.target_base
+    }
+
+    pub fn paths(&self) -> &Vec<String> {
+        &self.paths
     }
 }
 

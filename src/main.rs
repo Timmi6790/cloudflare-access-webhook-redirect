@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     let web_hook_data = WebHookData::new(
         client,
         config.webhook().target().clone(),
-        vec!["api/webhook".to_string(), "test/a/.*".to_string()],
+        config.webhook().paths().clone(),
         config.cloudflare().client_id().clone(),
         config.cloudflare().client_secret().clone(),
     )?;
