@@ -156,3 +156,174 @@ impl Server {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests_web_hook_data {
+    use crate::server::WebHookData;
+    use reqwest::Url;
+    use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+    use secrecy::{ExposeSecret, Secret};
+
+    fn get_client() -> ClientWithMiddleware {
+        ClientBuilder::new(reqwest::Client::new()).build()
+    }
+
+    fn get_target_host() -> Url {
+        Url::parse("https://example.com").unwrap()
+    }
+
+    fn get_allowed_paths() -> Vec<String> {
+        vec!["/test".to_string()]
+    }
+
+    fn get_access_id() -> Secret<String> {
+        Secret::new("test id".to_string())
+    }
+
+    fn get_access_secret() -> Secret<String> {
+        Secret::new("test secret".to_string())
+    }
+
+    #[test]
+    fn test_get_target_url() {
+        let base_url = Url::parse("https://example.com").unwrap();
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            base_url,
+            get_allowed_paths(),
+            get_access_id(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        let target_url = web_hook_data.get_target_url("/test").unwrap();
+        assert_eq!(target_url.as_str(), "https://example.com/test");
+    }
+
+    #[test]
+    fn test_get_target_url_trailing_slash() {
+        let base_url = Url::parse("https://example.com/").unwrap();
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            base_url,
+            get_allowed_paths(),
+            get_access_id(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        let target_url = web_hook_data.get_target_url("/test").unwrap();
+        assert_eq!(target_url.as_str(), "https://example.com/test");
+    }
+
+    #[test]
+    fn test_is_allowed_path_invalid_empty() {
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            get_target_host(),
+            vec![],
+            get_access_id(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        // Invalid paths
+        assert!(!web_hook_data.is_allowed_path(""));
+        assert!(!web_hook_data.is_allowed_path("/"));
+        assert!(!web_hook_data.is_allowed_path("/test"));
+        assert!(!web_hook_data.is_allowed_path("/test/"));
+        assert!(!web_hook_data.is_allowed_path("/test/123"));
+    }
+
+    #[test]
+    fn test_is_allowed_path_no_regex() {
+        let paths = vec!["/test/".to_string(), "/data/123".to_string()];
+
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            get_target_host(),
+            paths,
+            get_access_id(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        // Invalid paths
+        assert!(!web_hook_data.is_allowed_path(""));
+        assert!(!web_hook_data.is_allowed_path("/"));
+        assert!(!web_hook_data.is_allowed_path("/api"));
+        assert!(web_hook_data.is_allowed_path("/test/access"));
+        assert!(!web_hook_data.is_allowed_path("/data"));
+
+        // Valid paths
+        assert!(web_hook_data.is_allowed_path("/test/"));
+        assert!(web_hook_data.is_allowed_path("/data/123"));
+    }
+
+    #[test]
+    fn test_is_allowed_path_regex() {
+        let paths = vec!["/test/".to_string(), r"/data/\d*/private".to_string()];
+
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            get_target_host(),
+            paths,
+            get_access_id(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        // Invalid paths
+        assert!(!web_hook_data.is_allowed_path(""));
+        assert!(!web_hook_data.is_allowed_path("/"));
+        assert!(!web_hook_data.is_allowed_path("/api"));
+        assert!(!web_hook_data.is_allowed_path("/data"));
+        assert!(!web_hook_data.is_allowed_path("/data/123/"));
+        assert!(!web_hook_data.is_allowed_path("/data/123/test"));
+        assert!(!web_hook_data.is_allowed_path("/data/abc/private"));
+
+        // Valid paths
+        assert!(web_hook_data.is_allowed_path("/test/"));
+        assert!(web_hook_data.is_allowed_path("/data/123/private"));
+    }
+
+    #[test]
+    fn test_access_id() {
+        let expected_secret = Secret::new("cloudflare access id".to_string());
+
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            get_target_host(),
+            get_allowed_paths(),
+            expected_secret.clone(),
+            get_access_secret(),
+        )
+        .unwrap();
+
+        let secret = web_hook_data.access_id();
+        assert_eq!(
+            secret.to_str().unwrap(),
+            expected_secret.expose_secret().as_str()
+        );
+    }
+
+    #[test]
+    fn test_access_secret() {
+        let expected_secret = Secret::new("cloudflare access secret".to_string());
+
+        let web_hook_data = WebHookData::new(
+            get_client(),
+            get_target_host(),
+            get_allowed_paths(),
+            get_access_id(),
+            expected_secret.clone(),
+        )
+        .unwrap();
+
+        let secret = web_hook_data.access_secret();
+        assert_eq!(
+            secret.to_str().unwrap(),
+            expected_secret.expose_secret().as_str()
+        );
+    }
+}
