@@ -1,5 +1,4 @@
-use crate::converter::ActixToReqwestConverter;
-use actix_web::http::StatusCode;
+use crate::converter::{ActixToReqwestConverter, ReqwestToActixConverter};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use regex::RegexSet;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -36,7 +35,7 @@ async fn handle_web_hook(
 
     // Convert headers
     let mut target_headers: HeaderMap =
-        ActixToReqwestConverter::convert_headers(request.headers(), 2).await?;
+        ActixToReqwestConverter::convert_headers(request.headers(), 2);
 
     // Add Cloudflare Access headers
     target_headers.append("CF-Access-Client-Id", web_hook_data.access_id.clone());
@@ -59,19 +58,10 @@ async fn handle_web_hook(
         })?;
 
     // Parse reqwest response
-    let response_code = StatusCode::from_u16(response.status().as_u16()).map_err(|e| {
-        error!("Failed to convert response code: {}", e);
-        actix_web::error::ErrorBadRequest(e)
-    })?;
+    let converted_response = ReqwestToActixConverter::convert_response(response).await?;
 
-    let response_body = response.text().await.map_err(|e| {
-        error!("Failed to read response body: {}", e);
-        actix_web::error::ErrorBadRequest(e)
-    })?;
-
-    debug!("Return response with code {}", response_code);
-    let response = HttpResponse::build(response_code).body(response_body);
-    Ok(response)
+    debug!("Return response with code {}", converted_response.status());
+    Ok(converted_response)
 }
 
 pub struct WebHookData {
