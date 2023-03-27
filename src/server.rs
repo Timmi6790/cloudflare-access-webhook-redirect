@@ -9,6 +9,10 @@ use secrecy::{ExposeSecret, Secret};
 use crate::error::Error;
 use crate::Result;
 
+async fn get_health_status() -> HttpResponse {
+    HttpResponse::Ok().body("OK")
+}
+
 // TODO: Add query support
 // TODO: Add more method support?
 async fn handle_web_hook(
@@ -142,6 +146,7 @@ impl Server {
         let server = HttpServer::new(move || {
             App::new()
                 .app_data(web_hook_data.clone())
+                .route("/health", web::get().to(get_health_status))
                 .route("{tail:.*}", web::post().to(handle_web_hook))
         })
         .bind((self.host.clone(), self.port))?;
