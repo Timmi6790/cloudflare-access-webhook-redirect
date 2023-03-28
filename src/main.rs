@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use reqwest_middleware::ClientBuilder;
 use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
+use sentry::ClientInitGuard;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{filter, Layer};
@@ -11,6 +12,10 @@ use cloudflare_access_webhook_redirect::config::Config;
 use cloudflare_access_webhook_redirect::server::{Server, WebHookData};
 use cloudflare_access_webhook_redirect::Result;
 
+#[macro_use]
+extern crate tracing;
+
+const ENV_SENTRY_DSN: &str = "SENTRY_DSN";
 const ENV_LOG_LEVEL: &str = "LOG_LEVEL";
 
 const DEFAULT_LOG_LEVEL: &str = "info";
@@ -19,16 +24,19 @@ const DEFAULT_LOG_LEVEL: &str = "info";
 async fn main() -> Result<()> {
     setup_tracing()?;
 
+    // Prevents the process from exiting until all events are sent
+    let _sentry = setup_sentry();
+
     let config = Config::get_configurations()?;
 
-    let server = Server::new(config.server().host().to_string(), config.server().port());
+    let server = Server::new(config.server().host().to_string(), *config.server().port());
     let client = ClientBuilder::new(reqwest::Client::new())
         .with(TracingMiddleware::<SpanBackendWithUrl>::new())
         .build();
 
     let web_hook_data = WebHookData::new(
         client,
-        config.webhook().target().clone(),
+        config.webhook().target_base().clone(),
         config.webhook().paths().clone(),
         config.cloudflare().client_id().clone(),
         config.cloudflare().client_secret().clone(),
@@ -47,4 +55,21 @@ fn setup_tracing() -> Result<()> {
         .init();
 
     Ok(())
+}
+
+fn setup_sentry() -> Option<ClientInitGuard> {
+    return match env::var(ENV_SENTRY_DSN) {
+        Ok(dns) => Some(sentry::init((
+            dns,
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                attach_stacktrace: true,
+                ..Default::default()
+            },
+        ))),
+        Err(_) => {
+            info!("{ENV_SENTRY_DSN} not set, skipping Sentry setup");
+            return None;
+        }
+    };
 }
