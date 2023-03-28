@@ -7,26 +7,30 @@ use crate::error::Error;
 const DEFAULT_SERVER_HOST: &str = "127.0.0.1";
 const DEFAULT_SERVER_PORT: u16 = 8080;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Getters)]
+#[getset(get = "pub")]
 pub struct Config {
     server: ServerConfig,
     cloudflare: CloudFlareConfig,
     webhook: WebhookConfig,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Getters)]
+#[getset(get = "pub")]
 pub struct CloudFlareConfig {
     client_id: Secret<String>,
     client_secret: Secret<String>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Getters)]
+#[getset(get = "pub")]
 pub struct ServerConfig {
     host: String,
     port: u16,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Getters)]
+#[getset(get = "pub")]
 pub struct WebhookConfig {
     #[serde(deserialize_with = "deserialize_url_from_string")]
     target_base: Url,
@@ -48,48 +52,6 @@ impl Config {
             .map_err(|e| Error::custom(format!("Can't parse config: {e}")))?
             .try_deserialize::<Config>()
             .map_err(|e| Error::custom(format!("Failed to deserialize configuration: {e}")))
-    }
-
-    pub fn server(&self) -> &ServerConfig {
-        &self.server
-    }
-
-    pub fn cloudflare(&self) -> &CloudFlareConfig {
-        &self.cloudflare
-    }
-
-    pub fn webhook(&self) -> &WebhookConfig {
-        &self.webhook
-    }
-}
-
-impl CloudFlareConfig {
-    pub fn client_id(&self) -> &Secret<String> {
-        &self.client_id
-    }
-
-    pub fn client_secret(&self) -> &Secret<String> {
-        &self.client_secret
-    }
-}
-
-impl ServerConfig {
-    pub fn host(&self) -> &String {
-        &self.host
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-}
-
-impl WebhookConfig {
-    pub fn target(&self) -> &Url {
-        &self.target_base
-    }
-
-    pub fn paths(&self) -> &Vec<String> {
-        &self.paths
     }
 }
 
