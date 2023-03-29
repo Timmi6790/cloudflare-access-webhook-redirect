@@ -9,7 +9,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{filter, Layer};
 
 use cloudflare_access_webhook_redirect::config::Config;
-use cloudflare_access_webhook_redirect::server::{Server, WebHookData};
+use cloudflare_access_webhook_redirect::data::WebHookData;
+use cloudflare_access_webhook_redirect::server::Server;
 use cloudflare_access_webhook_redirect::Result;
 
 #[macro_use]
