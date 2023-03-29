@@ -29,6 +29,7 @@ tracing-subscriber = "0.3.16"
 secrecy = { version = "0.8.0", features = ["serde"] }
 regex = "1.7.3"
 getset = "0.1.2"
+derive-new = "0.5.9"
 sentry = { version = "0.30.0", features = ["anyhow", "debug-images", "reqwest", "backtrace"] }
 
 [dev-dependencies]
