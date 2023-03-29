@@ -34,6 +34,8 @@ sentry = { version = "0.30.0", features = ["anyhow", "debug-images", "reqwest", 
 
 [dev-dependencies]
 http = "0.2.9"
+temp-env = "0.3.1"
+serde_test = "1.0.152"
 
 [profile.release]
 lto = true

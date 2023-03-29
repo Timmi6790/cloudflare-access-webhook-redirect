@@ -389,6 +389,8 @@ dependencies = [
  "sentry",
  "serde",
  "serde_json",
+ "serde_test",
+ "temp-env",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -1698,6 +1700,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_test"
+version = "1.0.159"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f259aa64e48efaf5a4fea11f97cacb109f7fc3ae9db7244cbb40c01c7faf42bc"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1803,6 +1814,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba323866e5d033818e3240feeb9f7db2c4296674e4d9e16b97b7bf8f490434e8"
 dependencies = [
  "pin-utils",
+]
+
+[[package]]
+name = "temp-env"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ee95b343d943e5a0d2221fb73029e8040f3c91d6d06afec86c664682a361681"
+dependencies = [
+ "parking_lot",
 ]
 
 [[package]]
