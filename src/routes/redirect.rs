@@ -2,9 +2,13 @@ use crate::converter::{ActixToReqwestConverter, ReqwestToActixConverter};
 use crate::data::WebHookData;
 use actix_web::{web, HttpRequest, HttpResponse};
 
+pub fn get_config(cfg: &mut web::ServiceConfig) {
+    cfg.service(web::resource("{tail:.*}").route(web::post().to(post_redirect)));
+}
+
 // TODO: Add query support
 // TODO: Add more method support?
-pub async fn post_redirect(
+async fn post_redirect(
     mut payload: web::Payload,
     request: HttpRequest,
     path: web::Path<String>,
