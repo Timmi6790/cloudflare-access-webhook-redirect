@@ -3,6 +3,7 @@ use crate::routes::{health_check, redirect};
 use crate::Result;
 use actix_web::{web, App, HttpServer};
 use derive_new::new;
+use tracing_actix_web::TracingLogger;
 
 #[derive(new)]
 pub struct Server {
@@ -22,6 +23,7 @@ impl Server {
         let web_hook_data = web::Data::new(web_hook_data);
         let server = HttpServer::new(move || {
             App::new()
+                .wrap(TracingLogger::default())
                 .app_data(web_hook_data.clone())
                 .configure(health_check::get_config)
                 .configure(redirect::get_config)
