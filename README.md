@@ -14,7 +14,7 @@
 ![Docker Image Version (latest semver)](https://img.shields.io/docker/v/timmi6790/cloudflare-access-webhook-redirect)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Timmi6790/cloudflare-access-webhook-redirect/build.yml)
 ![Issues](https://img.shields.io/github/issues/Timmi6790/cloudflare-access-webhook-redirect)
-[![codecov](https://codecov.io/gh/Timmi6790/cloudflare-access-webhook-redirect/branch/main/graph/badge.svg?token=dDUZjsYmh2)](https://codecov.io/gh/Timmi6790/cloudflare-access-webhook-redirect)
+[![codecov](https://codecov.io/gh/Timmi6790/cloudflare-access-webhook-redirect/branch/master/graph/badge.svg?token=dDUZjsYmh2)](https://codecov.io/gh/Timmi6790/cloudflare-access-webhook-redirect)
 ![License](https://img.shields.io/github/license/Timmi6790/cloudflare-access-webhook-redirect)
 [![wakatime](https://wakatime.com/badge/github/Timmi6790/cloudflare-access-webhook-redirect.svg)](https://wakatime.com/badge/github/Timmi6790/cloudflare-access-webhook-redirect)
 
