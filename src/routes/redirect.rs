@@ -1,9 +1,11 @@
 use crate::converter::{ActixToReqwestConverter, ReqwestToActixConverter};
 use crate::data::WebHookData;
 use actix_web::http::Method;
+use actix_web::web::Query;
 use actix_web::{web, HttpRequest, HttpResponse};
 use reqwest::{Body, Url};
 use reqwest_middleware::{ClientWithMiddleware, RequestBuilder};
+use std::collections::HashMap;
 
 pub fn get_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -16,7 +18,6 @@ pub fn get_config(cfg: &mut web::ServiceConfig) {
     );
 }
 
-// TODO: Add query support
 async fn post_redirect(
     mut payload: web::Payload,
     request: HttpRequest,
@@ -50,12 +51,16 @@ async fn post_redirect(
         web_hook_data.access_secret().clone(),
     );
 
+    // Query params
+    let params = Query::<HashMap<String, String>>::from_query(request.query_string())?;
+
     // Redirect request
     let response = ReqwestBuilder::new(
         web_hook_data.client(),
         target_url,
         body,
         target_headers,
+        params.0,
         request.method(),
     )
     .build()
@@ -82,9 +87,11 @@ struct ReqwestBuilder<'a> {
     url: Url,
     body: Body,
     headers: reqwest::header::HeaderMap,
+    params: HashMap<String, String>,
 
     method: &'a Method,
     include_body: bool,
+    include_params: bool,
 }
 
 impl<'a> ReqwestBuilder<'a> {
@@ -93,6 +100,7 @@ impl<'a> ReqwestBuilder<'a> {
         url: Url,
         body: Body,
         headers: reqwest::header::HeaderMap,
+        params: HashMap<String, String>,
         method: &'a Method,
     ) -> ReqwestBuilder<'a> {
         ReqwestBuilder {
@@ -101,7 +109,9 @@ impl<'a> ReqwestBuilder<'a> {
             body,
             headers,
             method,
+            params,
             include_body: false,
+            include_params: false,
         }
     }
 
@@ -109,22 +119,35 @@ impl<'a> ReqwestBuilder<'a> {
         self.include_body = true;
     }
 
+    fn include_params(&mut self) {
+        self.include_params = true;
+    }
+
     pub fn build(mut self) -> crate::Result<RequestBuilder> {
         let mut request = match *self.method {
-            Method::GET => Ok(self.client.get(self.url)),
+            Method::GET => {
+                self.include_params();
+                Ok(self.client.get(self.url))
+            }
             Method::POST => {
                 self.include_body();
+                self.include_params();
                 Ok(self.client.post(self.url))
             }
             Method::PUT => {
                 self.include_body();
+                self.include_params();
                 Ok(self.client.put(self.url))
             }
             Method::PATCH => {
                 self.include_body();
+                self.include_params();
                 Ok(self.client.patch(self.url))
             }
-            Method::DELETE => Ok(self.client.delete(self.url)),
+            Method::DELETE => {
+                self.include_params();
+                Ok(self.client.delete(self.url))
+            }
             _ => Err(crate::Error::invalid_route(self.method)),
         }?;
 
@@ -133,6 +156,10 @@ impl<'a> ReqwestBuilder<'a> {
 
         if self.include_body {
             request = request.body(self.body);
+        }
+
+        if self.include_params {
+            request = request.query(&self.params);
         }
 
         Ok(request)
