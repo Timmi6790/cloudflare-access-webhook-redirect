@@ -20,7 +20,7 @@ RUN adduser \
     --gecos "" \
     --home "/app" \
     --shell "/sbin/nologin" \
-    "runner"
+    "1000"
 
 FROM scratch AS runtime
 
@@ -32,12 +32,11 @@ LABEL version=${version} \
 
 COPY --from=env /etc/passwd /etc/passwd
 COPY --from=env /etc/group /etc/group
-COPY --from=env --chown=runner:runner /app /app
 COPY --from=env /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 WORKDIR /app
 COPY --from=builder --chown=root:root /app/target/x86_64-unknown-linux-musl/release/cloudflare-access-webhook-redirect ./app
 
-USER runner
+USER 1000:1000
 
 CMD ["./app"]
