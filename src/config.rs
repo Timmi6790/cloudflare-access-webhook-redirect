@@ -1,6 +1,10 @@
+use crate::data::{AllowedPath, AllowedPaths};
+use regex::RegexSet;
 use reqwest::Url;
 use secrecy::Secret;
 use serde::{Deserialize, Deserializer};
+use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 use crate::error::Error;
 
@@ -34,18 +38,47 @@ pub struct ServerConfig {
 pub struct WebhookConfig {
     #[serde(deserialize_with = "deserialize_url_from_string")]
     target_base: Url,
-    paths: Vec<String>,
+    // Regex path: Allowed methods
+    #[serde(deserialize_with = "deserialize_test")]
+    paths: HashMap<String, HashSet<AllowedMethod>>,
+}
+
+impl WebhookConfig {
+    pub fn allowed_paths(&self) -> crate::Result<AllowedPaths> {
+        let paths: Vec<String> = self.paths.keys().map(|s| s.to_string()).collect();
+        let paths = RegexSet::new(paths)?;
+
+        let mut allowed_paths = HashMap::with_capacity(self.paths.len());
+        for (path, methods) in &self.paths {
+            let mut filtered_methods = HashSet::with_capacity(methods.len());
+            let mut all = false;
+            for method in methods {
+                if method == &AllowedMethod::ALL {
+                    all = true;
+                    continue;
+                }
+
+                let method = actix_web::http::Method::from_str(method.name()).map_err(|e| {
+                    Error::custom(format!(
+                        "Can't convert method to actix_web::http::Method: {} | {}",
+                        e,
+                        method.name()
+                    ))
+                })?;
+                filtered_methods.insert(method);
+            }
+
+            allowed_paths.insert(path.clone(), AllowedPath::new(all, filtered_methods));
+        }
+
+        Ok(AllowedPaths::new(paths, allowed_paths))
+    }
 }
 
 impl Config {
     pub fn get_configurations() -> crate::Result<Self> {
         config::Config::builder()
-            .add_source(
-                config::Environment::default()
-                    .list_separator(", ")
-                    .with_list_parse_key("webhook.paths")
-                    .try_parsing(true),
-            )
+            .add_source(config::Environment::default().try_parsing(true))
             .set_default("server.host", DEFAULT_SERVER_HOST)?
             .set_default("server.port", DEFAULT_SERVER_PORT)?
             .build()
@@ -63,10 +96,86 @@ where
     Url::parse(&string).map_err(serde::de::Error::custom)
 }
 
+pub fn deserialize_test<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<String, HashSet<AllowedMethod>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let string: String = Deserialize::deserialize(deserializer)?;
+
+    let values: Result<HashMap<String, HashSet<AllowedMethod>>, D::Error> = string
+        .split("; ")
+        .map(|s| {
+            let mut split = s.split(':');
+
+            let path = match split.next() {
+                Some(s) => Ok(s),
+                None => Err(serde::de::Error::custom("Path is missing")),
+            }?;
+
+            let methods = match split.next() {
+                Some(s) => Ok(s),
+                None => Err(serde::de::Error::custom("Methods are missing")),
+            }?;
+
+            let methods: Result<HashSet<AllowedMethod>, _> = methods
+                .split(',')
+                .map(|s| s.to_uppercase())
+                .map(|s| AllowedMethod::try_from(&s))
+                .collect();
+
+            Ok((path.to_string(), methods.map_err(serde::de::Error::custom)?))
+        })
+        .collect();
+
+    values
+}
+
+#[derive(Debug, serde::Deserialize, Eq, PartialEq, Hash)]
+pub enum AllowedMethod {
+    ALL,
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+}
+
+impl AllowedMethod {
+    pub fn name(&self) -> &str {
+        match self {
+            AllowedMethod::ALL => "ALL",
+            AllowedMethod::GET => "GET",
+            AllowedMethod::POST => "POST",
+            AllowedMethod::PUT => "PUT",
+            AllowedMethod::PATCH => "PATCH",
+            AllowedMethod::DELETE => "DELETE",
+        }
+    }
+}
+
+impl TryFrom<&String> for AllowedMethod {
+    type Error = crate::Error;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "ALL" => Ok(AllowedMethod::ALL),
+            "GET" => Ok(AllowedMethod::GET),
+            "POST" => Ok(AllowedMethod::POST),
+            "PUT" => Ok(AllowedMethod::PUT),
+            "PATCH" => Ok(AllowedMethod::PATCH),
+            "DELETE" => Ok(AllowedMethod::DELETE),
+            _ => Err(Error::custom(format!("Unknown method: {}", value))),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::config::Config;
+    use crate::config::{AllowedMethod, Config};
     use secrecy::ExposeSecret;
+    use std::collections::{HashMap, HashSet};
 
     const ENV_SERVER_HOST: &str = "SERVER.HOST";
     const ENV_SERVER_PORT: &str = "SERVER.PORT";
@@ -84,11 +193,11 @@ mod tests {
     const CORRECT_CLOUDFLARE_CLIENT_SECRET: &str = "client_secret";
 
     const CORRECT_WEBHOOK_TARGET_BASE: &str = "https://example.com/";
-    const CORRECT_WEBHOOK_PATHS: &str = "/test";
+    const CORRECT_WEBHOOK_PATHS: &str = "/test:ALL";
 
     #[test]
-    fn test_get_configurations_minimal_correct() {
-        temp_env::with_vars(
+    fn test_get_configurations_minimal_correct() -> Result<(), Box<dyn std::error::Error>> {
+        let config = temp_env::with_vars(
             vec![
                 (ENV_CLOUDFLARE_CLIENT_ID, Some(CORRECT_CLOUDFLARE_CLIENT_ID)),
                 (
@@ -98,33 +207,37 @@ mod tests {
                 (ENV_WEBHOOK_TARGET_BASE, Some(CORRECT_WEBHOOK_TARGET_BASE)),
                 (ENV_WEBHOOK_PATHS, Some(CORRECT_WEBHOOK_PATHS)),
             ],
-            || {
-                let result = Config::get_configurations();
-                assert!(result.is_ok());
+            Config::get_configurations,
+        )?;
 
-                let config = result.unwrap();
-
-                assert_eq!(
-                    config.cloudflare().client_id().expose_secret(),
-                    CORRECT_CLOUDFLARE_CLIENT_ID
-                );
-                assert_eq!(
-                    config.cloudflare().client_secret().expose_secret(),
-                    CORRECT_CLOUDFLARE_CLIENT_SECRET
-                );
-
-                assert_eq!(
-                    config.webhook().target_base().as_str(),
-                    CORRECT_WEBHOOK_TARGET_BASE
-                );
-                assert_eq!(config.webhook().paths(), &vec![CORRECT_WEBHOOK_PATHS]);
-            },
+        assert_eq!(
+            config.cloudflare().client_id().expose_secret(),
+            CORRECT_CLOUDFLARE_CLIENT_ID
         );
+        assert_eq!(
+            config.cloudflare().client_secret().expose_secret(),
+            CORRECT_CLOUDFLARE_CLIENT_SECRET
+        );
+
+        assert_eq!(
+            config.webhook().target_base().as_str(),
+            CORRECT_WEBHOOK_TARGET_BASE
+        );
+
+        let mut paths = HashMap::new();
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::ALL);
+        paths.insert("/test".to_string(), methods);
+
+        assert_eq!(config.webhook().paths(), &paths);
+
+        Ok(())
     }
 
     #[test]
-    fn test_get_configurations_full_correct() {
-        temp_env::with_vars(
+    fn test_get_configurations_full_correct() -> Result<(), Box<dyn std::error::Error>> {
+        let config = temp_env::with_vars(
             vec![
                 (ENV_SERVER_HOST, Some(CORRECT_SERVER_HOST)),
                 (ENV_SERVER_PORT, Some(CORRECT_SERVER_PORT)),
@@ -134,35 +247,48 @@ mod tests {
                     Some(CORRECT_CLOUDFLARE_CLIENT_SECRET),
                 ),
                 (ENV_WEBHOOK_TARGET_BASE, Some(CORRECT_WEBHOOK_TARGET_BASE)),
-                (ENV_WEBHOOK_PATHS, Some(r"/test, /test2, /test\d*")),
+                (
+                    ENV_WEBHOOK_PATHS,
+                    Some(r"/test:All; /test2:GET; /test\d*:POST,PUT"),
+                ),
             ],
-            || {
-                let result = Config::get_configurations();
-                assert!(result.is_ok());
+            Config::get_configurations,
+        )?;
 
-                let config = result.unwrap();
+        assert_eq!(config.server().host(), CORRECT_SERVER_HOST);
+        assert_eq!(config.server().port(), &8080u16);
 
-                assert_eq!(config.server().host(), CORRECT_SERVER_HOST);
-                assert_eq!(config.server().port(), &8080u16);
-
-                assert_eq!(
-                    config.cloudflare().client_id().expose_secret(),
-                    CORRECT_CLOUDFLARE_CLIENT_ID
-                );
-                assert_eq!(
-                    config.cloudflare().client_secret().expose_secret(),
-                    CORRECT_CLOUDFLARE_CLIENT_SECRET
-                );
-
-                assert_eq!(
-                    config.webhook().target_base().as_str(),
-                    CORRECT_WEBHOOK_TARGET_BASE
-                );
-                assert_eq!(
-                    config.webhook().paths(),
-                    &vec!["/test", "/test2", r"/test\d*"]
-                );
-            },
+        assert_eq!(
+            config.cloudflare().client_id().expose_secret(),
+            CORRECT_CLOUDFLARE_CLIENT_ID
         );
+        assert_eq!(
+            config.cloudflare().client_secret().expose_secret(),
+            CORRECT_CLOUDFLARE_CLIENT_SECRET
+        );
+
+        assert_eq!(
+            config.webhook().target_base().as_str(),
+            CORRECT_WEBHOOK_TARGET_BASE
+        );
+
+        let mut paths = HashMap::new();
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::ALL);
+        paths.insert("/test".to_string(), methods);
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::GET);
+        paths.insert("/test2".to_string(), methods);
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::POST);
+        methods.insert(AllowedMethod::PUT);
+        paths.insert(r"/test\d*".to_string(), methods);
+
+        assert_eq!(config.webhook().paths(), &paths);
+
+        Ok(())
     }
 }

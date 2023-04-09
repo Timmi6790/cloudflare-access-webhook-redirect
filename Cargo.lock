@@ -381,6 +381,7 @@ dependencies = [
  "derive-new",
  "getset",
  "http",
+ "lazy_static",
  "regex",
  "reqwest",
  "reqwest-middleware",

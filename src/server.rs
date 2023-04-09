@@ -17,7 +17,7 @@ impl Server {
             "Starting server on {}:{} with allowed paths {:#?}",
             self.host,
             self.port,
-            web_hook_data.allowed_paths()
+            web_hook_data.allowed_paths().allowed_paths()
         );
 
         let web_hook_data = web::Data::new(web_hook_data);

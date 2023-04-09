@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     let web_hook_data = WebHookData::new(
         client,
         config.webhook().target_base().clone(),
-        config.webhook().paths().clone(),
+        config.webhook().allowed_paths()?,
         config.cloudflare().client_id().clone(),
         config.cloudflare().client_secret().clone(),
     )?;
