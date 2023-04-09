@@ -43,40 +43,8 @@ pub struct WebhookConfig {
     paths: HashMap<String, HashSet<AllowedMethod>>,
 }
 
-impl WebhookConfig {
-    pub fn allowed_paths(&self) -> crate::Result<AllowedPaths> {
-        let paths: Vec<String> = self.paths.keys().map(|s| s.to_string()).collect();
-        let paths = RegexSet::new(paths)?;
-
-        let mut allowed_paths = HashMap::with_capacity(self.paths.len());
-        for (path, methods) in &self.paths {
-            let mut filtered_methods = HashSet::with_capacity(methods.len());
-            let mut all = false;
-            for method in methods {
-                if method == &AllowedMethod::ALL {
-                    all = true;
-                    continue;
-                }
-
-                let method = actix_web::http::Method::from_str(method.name()).map_err(|e| {
-                    Error::custom(format!(
-                        "Can't convert method to actix_web::http::Method: {} | {}",
-                        e,
-                        method.name()
-                    ))
-                })?;
-                filtered_methods.insert(method);
-            }
-
-            allowed_paths.insert(path.clone(), AllowedPath::new(all, filtered_methods));
-        }
-
-        Ok(AllowedPaths::new(paths, allowed_paths))
-    }
-}
-
 impl Config {
-    pub fn get_configurations() -> crate::Result<Self> {
+    pub fn get_configuration() -> crate::Result<Self> {
         config::Config::builder()
             .add_source(config::Environment::default().try_parsing(true))
             .set_default("server.host", DEFAULT_SERVER_HOST)?
@@ -132,7 +100,7 @@ where
     values
 }
 
-#[derive(Debug, serde::Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, serde::Deserialize, Eq, PartialEq, Hash, Clone)]
 pub enum AllowedMethod {
     ALL,
     GET,
@@ -168,6 +136,166 @@ impl TryFrom<&String> for AllowedMethod {
             "DELETE" => Ok(AllowedMethod::DELETE),
             _ => Err(Error::custom(format!("Unknown method: {}", value))),
         }
+    }
+}
+
+impl TryFrom<HashMap<String, HashSet<AllowedMethod>>> for AllowedPaths {
+    type Error = Error;
+
+    fn try_from(value: HashMap<String, HashSet<AllowedMethod>>) -> Result<Self, Self::Error> {
+        let paths: Vec<String> = value.keys().map(|s| s.to_string()).collect();
+        let paths = RegexSet::new(paths)?;
+
+        let mut allowed_paths = HashMap::with_capacity(value.len());
+        for (path, methods) in value {
+            allowed_paths.insert(path, methods.try_into()?);
+        }
+
+        Ok(AllowedPaths::new(paths, allowed_paths))
+    }
+}
+
+impl TryFrom<HashSet<AllowedMethod>> for AllowedPath {
+    type Error = Error;
+
+    fn try_from(value: HashSet<AllowedMethod>) -> Result<Self, Self::Error> {
+        let mut filtered_methods = HashSet::with_capacity(value.len());
+        let mut all = false;
+        for method in value {
+            if method == AllowedMethod::ALL {
+                all = true;
+                continue;
+            }
+
+            filtered_methods.insert(method.try_into()?);
+        }
+
+        Ok(AllowedPath::new(all, filtered_methods))
+    }
+}
+
+impl TryFrom<AllowedMethod> for actix_web::http::Method {
+    type Error = Error;
+
+    fn try_from(value: AllowedMethod) -> Result<Self, Self::Error> {
+        if value == AllowedMethod::ALL {
+            return Err(Error::custom(
+                "Can't convert ALL to actix_web::http::Method",
+            ));
+        }
+
+        actix_web::http::Method::from_str(value.name()).map_err(|e| {
+            Error::custom(format!(
+                "Can't convert method to actix_web::http::Method: {} | {}",
+                e,
+                value.name()
+            ))
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests_try_from {
+    use crate::config::AllowedMethod;
+    use std::collections::{HashMap, HashSet};
+
+    fn test_allowed_method_to_http_method(
+        allowed_method: AllowedMethod,
+        http_method: Option<actix_web::http::Method>,
+    ) {
+        let method: crate::Result<actix_web::http::Method> = allowed_method.try_into();
+        match http_method {
+            Some(http_method) => {
+                assert!(method.is_ok());
+                assert_eq!(method.unwrap(), http_method);
+            }
+            None => {
+                assert!(method.is_err(), "Expected error, got: {:?}", method);
+            }
+        }
+    }
+
+    #[test]
+    fn test_map_allowed_method_try_all() {
+        let mut paths = HashMap::new();
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::ALL);
+        paths.insert("/test".to_string(), methods);
+
+        let allowed_paths: crate::config::AllowedPaths = paths.try_into().unwrap();
+        assert!(allowed_paths.is_allowed("/test", &actix_web::http::Method::GET));
+        assert!(allowed_paths.is_allowed("/test", &actix_web::http::Method::PUT));
+    }
+
+    #[test]
+    fn test_map_allowed_method_try_get() {
+        let mut paths = HashMap::new();
+
+        let mut methods = HashSet::new();
+        methods.insert(AllowedMethod::GET);
+        paths.insert("/test".to_string(), methods);
+
+        let allowed_paths: crate::config::AllowedPaths = paths.try_into().unwrap();
+        assert!(allowed_paths.is_allowed("/test", &actix_web::http::Method::GET));
+        assert!(!allowed_paths.is_allowed("/test", &actix_web::http::Method::PUT));
+    }
+
+    #[test]
+    fn test_set_allowed_method_try_into_full() {
+        let mut set = HashSet::new();
+        set.insert(AllowedMethod::ALL);
+        set.insert(AllowedMethod::GET);
+        set.insert(AllowedMethod::POST);
+        set.insert(AllowedMethod::PUT);
+        set.insert(AllowedMethod::PATCH);
+        set.insert(AllowedMethod::DELETE);
+
+        let allowed_path: crate::config::AllowedPath = set.try_into().unwrap();
+        assert!(allowed_path.all());
+        assert_eq!(allowed_path.methods().len(), 5);
+    }
+
+    #[test]
+    fn test_set_allowed_method_try_into_minimal_no_all() {
+        let mut set = HashSet::new();
+        set.insert(AllowedMethod::GET);
+
+        let allowed_path: crate::config::AllowedPath = set.try_into().unwrap();
+        assert!(!allowed_path.all());
+        assert_eq!(allowed_path.methods().len(), 1);
+        assert!(allowed_path
+            .methods()
+            .contains(&actix_web::http::Method::GET));
+    }
+
+    #[test]
+    fn test_set_allowed_method_try_into_minimal_with_all() {
+        let mut set = HashSet::new();
+        set.insert(AllowedMethod::ALL);
+
+        let allowed_path: crate::config::AllowedPath = set.try_into().unwrap();
+        assert!(allowed_path.all());
+        assert_eq!(allowed_path.methods().len(), 0);
+    }
+
+    #[test]
+    fn test_allowed_method_try_into() {
+        test_allowed_method_to_http_method(AllowedMethod::ALL, None);
+        test_allowed_method_to_http_method(AllowedMethod::GET, Some(actix_web::http::Method::GET));
+        test_allowed_method_to_http_method(
+            AllowedMethod::POST,
+            Some(actix_web::http::Method::POST),
+        );
+        test_allowed_method_to_http_method(AllowedMethod::PUT, Some(actix_web::http::Method::PUT));
+        test_allowed_method_to_http_method(
+            AllowedMethod::PATCH,
+            Some(actix_web::http::Method::PATCH),
+        );
+        test_allowed_method_to_http_method(
+            AllowedMethod::DELETE,
+            Some(actix_web::http::Method::DELETE),
+        );
     }
 }
 
@@ -207,7 +335,7 @@ mod tests {
                 (ENV_WEBHOOK_TARGET_BASE, Some(CORRECT_WEBHOOK_TARGET_BASE)),
                 (ENV_WEBHOOK_PATHS, Some(CORRECT_WEBHOOK_PATHS)),
             ],
-            Config::get_configurations,
+            Config::get_configuration,
         )?;
 
         assert_eq!(
@@ -252,7 +380,7 @@ mod tests {
                     Some(r"/test:All; /test2:GET; /test\d*:POST,PUT"),
                 ),
             ],
-            Config::get_configurations,
+            Config::get_configuration,
         )?;
 
         assert_eq!(config.server().host(), CORRECT_SERVER_HOST);

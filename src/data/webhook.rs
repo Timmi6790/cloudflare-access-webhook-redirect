@@ -69,7 +69,8 @@ impl AllowedPaths {
     }
 }
 
-#[derive(new)]
+#[derive(new, Getters)]
+#[getset(get = "pub")]
 pub struct AllowedPath {
     all: bool,
     methods: HashSet<actix_web::http::Method>,
@@ -84,14 +85,12 @@ impl AllowedPath {
 #[cfg(test)]
 mod tests {
     use crate::config::AllowedMethod;
-    use crate::data::{AllowedPath, AllowedPaths, WebHookData};
+    use crate::data::WebHookData;
     use lazy_static::lazy_static;
-    use regex::RegexSet;
     use reqwest::Url;
     use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
     use secrecy::Secret;
     use std::collections::{HashMap, HashSet};
-    use std::str::FromStr;
 
     lazy_static! {
         static ref ALL_HTTP_METHODS: Vec<actix_web::http::Method> = vec![
@@ -112,32 +111,6 @@ mod tests {
         allowed_paths: HashMap<String, HashSet<AllowedMethod>>,
         access_id: Secret<String>,
         access_secret: Secret<String>,
-    }
-
-    impl TestWebHookData {
-        fn convert_paths(&self) -> AllowedPaths {
-            let paths: Vec<String> = self.allowed_paths.keys().map(|s| s.to_string()).collect();
-            let paths = RegexSet::new(paths).unwrap();
-
-            let mut allowed_paths = HashMap::with_capacity(self.allowed_paths.len());
-            for (path, methods) in &self.allowed_paths {
-                let mut filtered_methods = HashSet::with_capacity(methods.len());
-                let mut all = false;
-                for method in methods {
-                    if method == &AllowedMethod::ALL {
-                        all = true;
-                        continue;
-                    }
-
-                    let method = actix_web::http::Method::from_str(method.name()).unwrap();
-                    filtered_methods.insert(method);
-                }
-
-                allowed_paths.insert(path.clone(), AllowedPath::new(all, filtered_methods));
-            }
-
-            AllowedPaths::new(paths, allowed_paths)
-        }
     }
 
     impl Default for TestWebHookData {
@@ -162,11 +135,10 @@ mod tests {
 
     impl From<TestWebHookData> for WebHookData {
         fn from(test_web_hook_data: TestWebHookData) -> Self {
-            let paths = test_web_hook_data.convert_paths();
             WebHookData::new(
                 test_web_hook_data.client,
                 test_web_hook_data.target_host,
-                paths,
+                test_web_hook_data.allowed_paths.clone().try_into().unwrap(),
                 test_web_hook_data.access_id,
                 test_web_hook_data.access_secret,
             )
