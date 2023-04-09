@@ -37,7 +37,7 @@ A usage case would be github webhooks since they don't support custom headers.
 | CLOUDFLARE.CLIENT_ID     	       | X	          | Cloudflare Access client id                        	                              | e25a2fd93e1049a4bb48d00907d6f4bf.access  |
 | CLOUDFLARE.CLIENT_SECRET       	 | X         	 | Cloudflare Access client secret                     	                             | a5990007b7a54f83b52594a86c4d520e         |
 | WEBHOOK.TARGET_BASE     	        | X	          | Forward target base                            	                                  | test.google.com/api                      |
-| WEBHOOK.PATHS    	               | X	          | Allowed paths as regex with method                          	                     | /test:All; /test2:GET; /test\d*:POST,PUT |
+| WEBHOOK.PATHS    	               | X	          | Allowed paths as regex with method                          	                     | /test:ALL; /test2:GET; /test\d*:POST,PUT |
 | SERVER.HOST 	                    | 	           | Server host [Default: 0.0.0.0]	                                                   | 0.0.0.0                                  |
 | SERVER.PORT       	              | 	           | Server port [Default: 8080]                           	                           | 9090                                     |
 | SENTRY_DSN     	                 | 	           | Sentry DSN                          	                                             |                                          |
