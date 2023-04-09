@@ -39,7 +39,7 @@ pub struct WebhookConfig {
     #[serde(deserialize_with = "deserialize_url_from_string")]
     target_base: Url,
     // Regex path: Allowed methods
-    #[serde(deserialize_with = "deserialize_test")]
+    #[serde(deserialize_with = "deserialize_paths_from_string")]
     paths: HashMap<String, HashSet<AllowedMethod>>,
 }
 
@@ -64,7 +64,7 @@ where
     Url::parse(&string).map_err(serde::de::Error::custom)
 }
 
-pub fn deserialize_test<'de, D>(
+pub fn deserialize_paths_from_string<'de, D>(
     deserializer: D,
 ) -> Result<HashMap<String, HashSet<AllowedMethod>>, D::Error>
 where
