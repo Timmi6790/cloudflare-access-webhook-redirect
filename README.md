@@ -32,16 +32,16 @@ A usage case would be github webhooks since they don't support custom headers.
 
 ### Environment variables
 
-| Environment    	                 | Required 	  | Description                         	                                             |
-|----------------------------------|-------------|-----------------------------------------------------------------------------------|
-| CLOUDFLARE.CLIENT_ID     	       | X	          | Cloudflare Access client id                        	                              |
-| CLOUDFLARE.CLIENT_SECRET       	 | X         	 | Cloudflare Access client secret                     	                             |
-| WEBHOOK.TARGET_BASE     	        | X	          | Forward target base                            	                                  |
-| WEBHOOK.PATHS    	               | X	          | Allowed paths as regex seperated by `, `                           	              |
-| SERVER.HOST 	                    | 	           | Server host [Default: 0.0.0.0]	                                                   |
-| SERVER.PORT       	              | 	           | Server port [Default: 8080]                           	                           |
-| SENTRY_DSN     	                 | 	           | Sentry DSN                          	                                             |
-| LOG_LEVEL  	                     | 	           | Log level [FATAL, ERROR, WARN, INFO, DEBUG, TRACE, ALL]                         	 |
+| Environment    	                 | Required 	  | Description                         	                                             | Example                                  |
+|----------------------------------|-------------|-----------------------------------------------------------------------------------|------------------------------------------|
+| CLOUDFLARE.CLIENT_ID     	       | X	          | Cloudflare Access client id                        	                              | e25a2fd93e1049a4bb48d00907d6f4bf.access  |
+| CLOUDFLARE.CLIENT_SECRET       	 | X         	 | Cloudflare Access client secret                     	                             | a5990007b7a54f83b52594a86c4d520e         |
+| WEBHOOK.TARGET_BASE     	        | X	          | Forward target base                            	                                  | test.google.com/api                      |
+| WEBHOOK.PATHS    	               | X	          | Allowed paths as regex with method                          	                     | /test:All; /test2:GET; /test\d*:POST,PUT |
+| SERVER.HOST 	                    | 	           | Server host [Default: 0.0.0.0]	                                                   | 0.0.0.0                                  |
+| SERVER.PORT       	              | 	           | Server port [Default: 8080]                           	                           | 9090                                     |
+| SENTRY_DSN     	                 | 	           | Sentry DSN                          	                                             |                                          |
+| LOG_LEVEL  	                     | 	           | Log level [FATAL, ERROR, WARN, INFO, DEBUG, TRACE, ALL]                         	 | INFO                                     |
 
 ## License
 

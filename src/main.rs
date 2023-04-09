@@ -28,20 +28,25 @@ async fn main() -> Result<()> {
     // Prevents the process from exiting until all events are sent
     let _sentry = setup_sentry();
 
-    let config = Config::get_configurations()?;
+    let server;
+    let web_hook_data;
+    {
+        let config = Config::get_configuration()?;
 
-    let server = Server::new(config.server().host().to_string(), *config.server().port());
-    let client = ClientBuilder::new(reqwest::Client::new())
-        .with(TracingMiddleware::<SpanBackendWithUrl>::new())
-        .build();
+        server = Server::new(config.server().host().to_string(), *config.server().port());
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(TracingMiddleware::<SpanBackendWithUrl>::new())
+            .build();
 
-    let web_hook_data = WebHookData::new(
-        client,
-        config.webhook().target_base().clone(),
-        config.webhook().paths().clone(),
-        config.cloudflare().client_id().clone(),
-        config.cloudflare().client_secret().clone(),
-    )?;
+        web_hook_data = WebHookData::new(
+            client,
+            config.webhook().target_base().clone(),
+            config.webhook().paths().clone().try_into()?,
+            config.cloudflare().client_id().clone(),
+            config.cloudflare().client_secret().clone(),
+        )?;
+    }
+
     server.run_until_stopped(web_hook_data).await?;
 
     Ok(())

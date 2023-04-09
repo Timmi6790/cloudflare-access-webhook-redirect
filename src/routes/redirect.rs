@@ -26,7 +26,7 @@ async fn post_redirect(
 ) -> core::result::Result<HttpResponse, actix_web::Error> {
     // Only allow specific paths
     info!("Received {} request for path: {}", request.method(), path);
-    if !web_hook_data.is_allowed_path(&path) {
+    if !web_hook_data.is_allowed_path(&path, request.method()) {
         debug!("Path not allowed: {}", path);
         return Ok(HttpResponse::NotFound().finish());
     }
