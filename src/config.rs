@@ -1,5 +1,4 @@
 use crate::data::{AllowedPath, AllowedPaths};
-use regex::RegexSet;
 use reqwest::Url;
 use secrecy::Secret;
 use serde::{Deserialize, Deserializer};
@@ -143,15 +142,12 @@ impl TryFrom<HashMap<String, HashSet<AllowedMethod>>> for AllowedPaths {
     type Error = Error;
 
     fn try_from(value: HashMap<String, HashSet<AllowedMethod>>) -> Result<Self, Self::Error> {
-        let paths: Vec<String> = value.keys().map(|s| s.to_string()).collect();
-        let paths = RegexSet::new(paths)?;
-
         let mut allowed_paths = HashMap::with_capacity(value.len());
         for (path, methods) in value {
             allowed_paths.insert(path, methods.try_into()?);
         }
 
-        Ok(AllowedPaths::new(paths, allowed_paths))
+        AllowedPaths::new(allowed_paths)
     }
 }
 
