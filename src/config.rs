@@ -127,7 +127,7 @@ impl TryFrom<&String> for AllowedMethod {
     type Error = crate::Error;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+        match value.to_uppercase().as_str() {
             "ALL" => Ok(AllowedMethod::ALL),
             "GET" => Ok(AllowedMethod::GET),
             "POST" => Ok(AllowedMethod::POST),
@@ -199,20 +199,59 @@ mod tests_try_from {
     use crate::config::AllowedMethod;
     use std::collections::{HashMap, HashSet};
 
+    fn compare_option_with_result<T>(expected: Option<T>, result: crate::Result<T>)
+    where
+        T: std::fmt::Debug + std::cmp::PartialEq,
+    {
+        match expected {
+            Some(expected) => {
+                assert!(result.is_ok());
+                assert_eq!(result.unwrap(), expected);
+            }
+            None => {
+                assert!(result.is_err(), "Expected error, got: {:?}", result);
+            }
+        }
+    }
+
+    fn test_string_to_allowed_method(input: &String, expected: Option<AllowedMethod>) {
+        let method: crate::Result<AllowedMethod> = input.try_into();
+        compare_option_with_result(expected, method);
+    }
+
     fn test_allowed_method_to_http_method(
         allowed_method: AllowedMethod,
         http_method: Option<actix_web::http::Method>,
     ) {
         let method: crate::Result<actix_web::http::Method> = allowed_method.try_into();
-        match http_method {
-            Some(http_method) => {
-                assert!(method.is_ok());
-                assert_eq!(method.unwrap(), http_method);
-            }
-            None => {
-                assert!(method.is_err(), "Expected error, got: {:?}", method);
-            }
-        }
+        compare_option_with_result(http_method, method);
+    }
+
+    #[test]
+    fn test_string_to_allowed_method_upper_case() {
+        test_string_to_allowed_method(&"ALL".to_string(), Some(AllowedMethod::ALL));
+        test_string_to_allowed_method(&"GET".to_string(), Some(AllowedMethod::GET));
+        test_string_to_allowed_method(&"POST".to_string(), Some(AllowedMethod::POST));
+        test_string_to_allowed_method(&"PUT".to_string(), Some(AllowedMethod::PUT));
+        test_string_to_allowed_method(&"PATCH".to_string(), Some(AllowedMethod::PATCH));
+        test_string_to_allowed_method(&"DELETE".to_string(), Some(AllowedMethod::DELETE));
+    }
+
+    #[test]
+    fn test_string_to_allowed_method_lower_case() {
+        test_string_to_allowed_method(&"all".to_string(), Some(AllowedMethod::ALL));
+        test_string_to_allowed_method(&"get".to_string(), Some(AllowedMethod::GET));
+        test_string_to_allowed_method(&"post".to_string(), Some(AllowedMethod::POST));
+        test_string_to_allowed_method(&"put".to_string(), Some(AllowedMethod::PUT));
+        test_string_to_allowed_method(&"patch".to_string(), Some(AllowedMethod::PATCH));
+        test_string_to_allowed_method(&"delete".to_string(), Some(AllowedMethod::DELETE));
+    }
+
+    #[test]
+    fn test_string_to_allowed_method_invalid() {
+        test_string_to_allowed_method(&"test".to_string(), None);
+        test_string_to_allowed_method(&"GETT".to_string(), None);
+        test_string_to_allowed_method(&"gett".to_string(), None);
     }
 
     #[test]
