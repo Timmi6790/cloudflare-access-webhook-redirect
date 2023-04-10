@@ -8,7 +8,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use secrecy::{ExposeSecret, Secret};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Getters)]
+#[derive(Getters, Debug)]
 #[getset(get = "pub")]
 pub struct WebHookData {
     client: ClientWithMiddleware,
@@ -51,7 +51,7 @@ impl WebHookData {
     }
 }
 
-#[derive(new, Getters)]
+#[derive(Getters, Debug)]
 #[getset(get = "pub")]
 pub struct AllowedPaths {
     allowed_paths: RegexSet,
@@ -59,6 +59,36 @@ pub struct AllowedPaths {
 }
 
 impl AllowedPaths {
+    /// Escape regex keys with ^ and $. This is required or otherwise our input /test/ will also match /d/test/d.
+    fn escape_regexes(paths: HashMap<String, AllowedPath>) -> HashMap<String, AllowedPath> {
+        paths
+            .into_iter()
+            .map(|(mut k, v)| {
+                // Escape start of the regex
+                if !k.starts_with('^') {
+                    k = format!("^{}", k);
+                }
+
+                // Escape end of the regex
+                if !k.ends_with('$') {
+                    k = format!("{}$", k);
+                }
+
+                (k, v)
+            })
+            .collect()
+    }
+
+    pub fn new(allowed_methods: HashMap<String, AllowedPath>) -> Result<Self> {
+        let allowed_methods = AllowedPaths::escape_regexes(allowed_methods);
+        let allowed_paths = RegexSet::new(allowed_methods.keys())?;
+
+        Ok(Self {
+            allowed_paths,
+            allowed_methods,
+        })
+    }
+
     pub fn is_allowed(&self, path: &str, method: &actix_web::http::Method) -> bool {
         let matches = self.allowed_paths.matches(path);
         matches
@@ -69,7 +99,7 @@ impl AllowedPaths {
     }
 }
 
-#[derive(new, Getters)]
+#[derive(new, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct AllowedPath {
     all: bool,
@@ -83,7 +113,7 @@ impl AllowedPath {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_webhook_data {
     use crate::config::AllowedMethod;
     use crate::data::WebHookData;
     use lazy_static::lazy_static;
@@ -214,7 +244,7 @@ mod tests {
             assert!(!web_hook_data.is_allowed_path("", method));
             assert!(!web_hook_data.is_allowed_path("/", method));
             assert!(!web_hook_data.is_allowed_path("/api", method));
-            assert!(web_hook_data.is_allowed_path("/test/access", method));
+            assert!(!web_hook_data.is_allowed_path("/test/access", method));
             assert!(!web_hook_data.is_allowed_path("/data", method));
         });
 
@@ -270,5 +300,83 @@ mod tests {
         ALL_HTTP_METHODS.iter().for_each(|method| {
             assert!(web_hook_data.is_allowed_path("/data/123/private", method));
         });
+    }
+
+    #[test]
+    fn test_is_allowed_path_correctness() {
+        let mut paths = HashMap::new();
+        paths.insert(
+            "/test/".to_string(),
+            vec![AllowedMethod::GET].into_iter().collect(),
+        );
+
+        let web_hook_data: WebHookData = TestWebHookData {
+            allowed_paths: paths,
+            ..Default::default()
+        }
+        .into();
+
+        // Invalid paths
+        assert!(!web_hook_data.is_allowed_path("/d/test/", &actix_web::http::Method::GET));
+        assert!(!web_hook_data.is_allowed_path("/d/test/d", &actix_web::http::Method::GET));
+    }
+}
+
+#[cfg(test)]
+mod tests_allowed_paths {
+    use crate::data::{AllowedPath, AllowedPaths};
+    use std::collections::HashMap;
+
+    fn create_map(paths: Vec<&str>) -> HashMap<String, AllowedPath> {
+        let mut map = HashMap::new();
+        for path in paths {
+            map.insert(
+                path.to_string(),
+                AllowedPath::new(
+                    false,
+                    vec![actix_web::http::Method::GET].into_iter().collect(),
+                ),
+            );
+        }
+
+        map
+    }
+
+    fn verify_map(map: HashMap<String, AllowedPath>) {
+        for key in map.keys() {
+            // Assert correct ends and starts
+            assert!(key.starts_with('^'));
+            assert!(key.ends_with('$'));
+
+            // Make sure that we don't add an extra ^ or $ to the regex
+            assert!(!key.starts_with("^^"));
+            assert!(!key.ends_with("$$"));
+        }
+    }
+
+    fn verify_paths(paths: Vec<&str>) {
+        let input = create_map(paths);
+        let converted = AllowedPaths::escape_regexes(input);
+        verify_map(converted);
+    }
+
+    #[test]
+    fn test_escape_regexes_empty() {
+        verify_paths(vec![r"/test/", "", r"/data/\d*/private"]);
+    }
+
+    #[test]
+    fn test_escape_regexes_escaped_start() {
+        verify_paths(vec![r"^/test/", "^", r"^/data/\d*/private"]);
+    }
+
+    #[test]
+    fn test_escape_regexes_escaped_end() {
+        verify_paths(vec![r"/test/$", "$", r"/data/\d*/private$"]);
+    }
+
+    #[test]
+    fn test_escape_regexes_escaped() {
+        verify_paths(vec![r"^/test/$", "^$", r"^/data/\d*/private$"]);
     }
 }
