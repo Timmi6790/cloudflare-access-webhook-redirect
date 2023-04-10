@@ -10,15 +10,15 @@ use std::collections::HashMap;
 pub fn get_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("{tail:.*}")
-            .route(web::get().to(post_redirect))
-            .route(web::post().to(post_redirect))
-            .route(web::put().to(post_redirect))
-            .route(web::patch().to(post_redirect))
-            .route(web::delete().to(post_redirect)),
+            .route(web::get().to(redirect))
+            .route(web::post().to(redirect))
+            .route(web::put().to(redirect))
+            .route(web::patch().to(redirect))
+            .route(web::delete().to(redirect)),
     );
 }
 
-async fn post_redirect(
+async fn redirect(
     mut payload: web::Payload,
     request: HttpRequest,
     path: web::Path<String>,
@@ -163,5 +163,162 @@ impl<'a> ReqwestBuilder<'a> {
         }
 
         Ok(request)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::AllowedMethod;
+    use actix_web::{test, App};
+    use reqwest_middleware::ClientBuilder;
+    use secrecy::Secret;
+    use std::collections::HashSet;
+    use wiremock::{Mock, ResponseTemplate};
+
+    const RETURN_STRING: &str = "Success!";
+
+    #[derive(Getters)]
+    #[getset(get = "pub")]
+    pub struct TestApp {
+        _mock_server: wiremock::MockServer,
+        web_hook_data: web::Data<WebHookData>,
+    }
+
+    impl TestApp {
+        pub async fn new(
+            mock_method: &str,
+            mock_path: &str,
+            allowed_method: &str,
+            allowed_path: &str,
+        ) -> Self {
+            let mock_server = wiremock::MockServer::start().await;
+            Mock::given(wiremock::matchers::method(mock_method))
+                .and(wiremock::matchers::path(mock_path))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_string(RETURN_STRING)
+                        .insert_header("Test", "123"),
+                )
+                .expect(1)
+                .mount(&mock_server)
+                .await;
+
+            let target = Url::parse(mock_server.uri().as_str()).unwrap();
+
+            let mut paths = HashMap::new();
+
+            let mut methods: HashSet<AllowedMethod> = HashSet::new();
+            methods.insert((&allowed_method.to_string()).try_into().unwrap());
+            paths.insert(allowed_path.to_string(), methods);
+
+            let allowed_paths = paths.try_into().unwrap();
+
+            let client = ClientBuilder::new(reqwest::Client::new()).build();
+            let web_hook_data = WebHookData::new(
+                client,
+                target,
+                allowed_paths,
+                Secret::new("access-id".to_string()),
+                Secret::new("access-secret".to_string()),
+            )
+            .unwrap();
+
+            let web_hook_data = web::Data::new(web_hook_data);
+            Self {
+                _mock_server: mock_server,
+                web_hook_data,
+            }
+        }
+    }
+
+    #[actix_web::test]
+    async fn test_redirect_get() {
+        let test_app = TestApp::new("GET", "test", "GET", "test").await;
+        let app = test::init_service(
+            App::new()
+                .app_data(test_app.web_hook_data().clone())
+                .configure(get_config),
+        )
+        .await;
+
+        // Valid request
+        let req = test::TestRequest::get().uri("/test").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body = resp.into_body();
+        let bytes = actix_web::body::to_bytes(body).await;
+        assert_eq!(
+            bytes.unwrap(),
+            web::Bytes::from_static(RETURN_STRING.as_ref())
+        );
+
+        // Invalid request
+        let req = test::TestRequest::get().uri("/test/d").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 404);
+    }
+
+    #[actix_web::test]
+    async fn test_redirect_all() {
+        let test_app = TestApp::new("PUT", "test", "ALL", "test").await;
+        let app = test::init_service(
+            App::new()
+                .app_data(test_app.web_hook_data().clone())
+                .configure(get_config),
+        )
+        .await;
+
+        // Valid request
+        let req = test::TestRequest::put().uri("/test").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body = resp.into_body();
+        let bytes = actix_web::body::to_bytes(body).await;
+        assert_eq!(
+            bytes.unwrap(),
+            web::Bytes::from_static(RETURN_STRING.as_ref())
+        );
+
+        // Invalid request - Allowed request, but not supported by the mock server
+        let req = test::TestRequest::get().uri("/test").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(!resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_redirect_regex() {
+        let test_app = TestApp::new("PUT", "test/10090", "ALL", r"test/\d*").await;
+        let app = test::init_service(
+            App::new()
+                .app_data(test_app.web_hook_data().clone())
+                .configure(get_config),
+        )
+        .await;
+
+        // Valid request
+        let req = test::TestRequest::put().uri("/test/10090").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+        let body = resp.into_body();
+        let bytes = actix_web::body::to_bytes(body).await;
+        assert_eq!(
+            bytes.unwrap(),
+            web::Bytes::from_static(RETURN_STRING.as_ref())
+        );
+
+        // Invalid request -- Allowed request, but not supported by the mock server
+        let req = test::TestRequest::put().uri("/test/9").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(!resp.status().is_success());
+
+        // Invalid request
+        let req = test::TestRequest::get().uri("/test/d").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 404);
+
+        let req = test::TestRequest::get().uri("/test/90d").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 404);
     }
 }
