@@ -22,8 +22,20 @@
 
 ## About The Project
 
-A simple forward proxy to allow specified post paths to be forwarded through a cloudflare access protected endpoint.
-A usage case would be github webhooks since they don't support custom headers.
+Forward path and method specific requests through a cloudflare access protected endpoint.
+
+## Features
+| Implemented        | Feature                                      |
+|--------------------|----------------------------------------------|
+| :heavy_check_mark: | GET, POST, PUT, PATCH, DELETE method support |
+| :heavy_check_mark: | Path specific forwarding                     |
+| :heavy_check_mark: | Regex Path support                           |
+| :heavy_check_mark: | Parameter support                            |
+| :heavy_check_mark: | Return body                                  |
+| :heavy_check_mark: | Return status code                           |
+|                    | Return headers                               |
+
+
 
 ### Installation - Helm chart
 
