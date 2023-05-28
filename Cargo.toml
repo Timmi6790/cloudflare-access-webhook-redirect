@@ -38,7 +38,7 @@ http = "0.2.9"
 temp-env = "0.3.1"
 serde_test = "1.0.163"
 lazy_static = "1.4.0"
-wiremock = "0.5.17"
+wiremock = "0.5.18"
 
 [profile.release]
 lto = true
