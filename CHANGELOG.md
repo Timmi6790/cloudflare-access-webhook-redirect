@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/0.2.5...0.2.6) (2023-07-13)
+
+
+### Bug Fixes
+
+* **actions:** fix docker image release ([d558078](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/d558078686df0dcd16afda6075473d5c0c978887))
+
 ## [0.2.5](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/0.2.4...0.2.5) (2023-06-22)
 
 
