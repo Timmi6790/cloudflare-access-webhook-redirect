@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/0.2.6...0.2.7) (2023-07-13)
+
+
+### Bug Fixes
+
+* **actions:** add missing task id in release-please action ([22a3a00](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/22a3a00a50fe0b7f3c63325707b89aff5a3b9b37))
+
 ## [0.2.6](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/0.2.5...0.2.6) (2023-07-13)
 
 
