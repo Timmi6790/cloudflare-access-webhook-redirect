@@ -34,7 +34,7 @@ derive-new = "0.5.9"
 sentry = { version = "0.31.5", features = ["anyhow", "debug-images", "reqwest", "backtrace"] }
 
 [dev-dependencies]
-http = "0.2.9"
+http = "1.0.0"
 temp-env = "0.3.4"
 serde_test = "1.0.171"
 lazy_static = "1.4.0"
