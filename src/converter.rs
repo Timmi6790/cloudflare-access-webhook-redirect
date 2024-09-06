@@ -92,14 +92,15 @@ impl From<ConverterError> for actix_web::Error {
 
 #[cfg(test)]
 mod tests_actix_to_reqwest_converter {
+    use actix_web::http::header::{HeaderName, HeaderValue};
     use std::collections::HashMap;
 
     fn convert_headers(values: HashMap<String, String>) -> actix_web::http::header::HeaderMap {
         let mut header_map = actix_web::http::header::HeaderMap::new();
 
         for (key, value) in values {
-            let key = http::header::HeaderName::from_bytes(key.as_bytes()).unwrap();
-            let value = http::header::HeaderValue::from_bytes(value.as_bytes()).unwrap();
+            let key = HeaderName::from_bytes(key.as_bytes()).unwrap();
+            let value = HeaderValue::from_bytes(value.as_bytes()).unwrap();
 
             header_map.append(key, value);
         }
@@ -150,7 +151,7 @@ mod tests_reqwest_to_actix_converter {
         let actix_status_code =
             super::ReqwestToActixConverter::convert_status_code(status_code).unwrap();
 
-        assert_eq!(actix_status_code, http::StatusCode::OK);
+        assert_eq!(actix_status_code, actix_web::http::StatusCode::OK);
     }
 
     #[tokio::test]
@@ -167,7 +168,7 @@ mod tests_reqwest_to_actix_converter {
             .await
             .unwrap();
 
-        assert_eq!(actix_response.status(), http::StatusCode::OK);
+        assert_eq!(actix_response.status(), actix_web::http::StatusCode::OK);
 
         // TODO: VERIFY BODY
     }
