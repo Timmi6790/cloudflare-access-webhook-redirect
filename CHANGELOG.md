@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.10](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.2.9...v0.2.10) (2024-09-07)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([cf4ee44](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/cf4ee4462ca20e5cedd2fa6c4bbd8e96aaccc3fb))
+
 ## [0.2.9](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/0.2.8...v0.2.9) (2024-09-06)
 
 
