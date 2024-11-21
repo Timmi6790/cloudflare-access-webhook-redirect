@@ -13,7 +13,7 @@ name = "cloudflare-access-webhook-redirect"
 
 [dependencies]
 anyhow = { version = "1.0.86", features = ["backtrace"] }
-thiserror = "1.0.63"
+thiserror = "2.0.0"
 backtrace = "0.3.73"
 actix-web = "4.9.0"
 tracing-actix-web = "0.7.12"
