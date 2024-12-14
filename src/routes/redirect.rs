@@ -172,7 +172,7 @@ mod tests {
     use crate::config::AllowedMethod;
     use actix_web::{test, App};
     use reqwest_middleware::ClientBuilder;
-    use secrecy::Secret;
+    use secrecy::SecretString;
     use std::collections::HashSet;
     use wiremock::{Mock, ResponseTemplate};
 
@@ -219,8 +219,8 @@ mod tests {
                 client,
                 target,
                 allowed_paths,
-                Secret::new("access-id".to_string()),
-                Secret::new("access-secret".to_string()),
+                SecretString::new(Box::from("access-id".to_string())),
+                SecretString::new(Box::from("access-secret".to_string())),
             )
             .unwrap();
 

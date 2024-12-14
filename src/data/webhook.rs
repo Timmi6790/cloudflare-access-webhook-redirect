@@ -5,7 +5,7 @@ use regex::RegexSet;
 use reqwest::header::HeaderValue;
 use reqwest::Url;
 use reqwest_middleware::ClientWithMiddleware;
-use secrecy::{ExposeSecret, Secret};
+use secrecy::{ExposeSecret, SecretString};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Getters, Debug)]
@@ -24,8 +24,8 @@ impl WebHookData {
         client: ClientWithMiddleware,
         target_host: Url,
         allowed_paths: AllowedPaths,
-        access_id: Secret<String>,
-        access_secret: Secret<String>,
+        access_id: SecretString,
+        access_secret: SecretString,
     ) -> Result<Self> {
         let access_id = HeaderValue::from_str(access_id.expose_secret())
             .map_err(|_| Error::custom("Failed to map access id to header value"))?;
@@ -119,7 +119,7 @@ mod tests_webhook_data {
     use lazy_static::lazy_static;
     use reqwest::Url;
     use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-    use secrecy::Secret;
+    use secrecy::SecretString;
     use std::collections::{HashMap, HashSet};
 
     lazy_static! {
@@ -139,8 +139,8 @@ mod tests_webhook_data {
         client: ClientWithMiddleware,
         target_host: Url,
         allowed_paths: HashMap<String, HashSet<AllowedMethod>>,
-        access_id: Secret<String>,
-        access_secret: Secret<String>,
+        access_id: SecretString,
+        access_secret: SecretString,
     }
 
     impl Default for TestWebHookData {
@@ -157,8 +157,8 @@ mod tests_webhook_data {
                 client: ClientBuilder::new(reqwest::Client::new()).build(),
                 target_host: Url::parse("https://example.com").unwrap(),
                 allowed_paths,
-                access_id: Secret::new("test id".to_string()),
-                access_secret: Secret::new("test secret".to_string()),
+                access_id: SecretString::new(Box::from("test id".to_string())),
+                access_secret: SecretString::new(Box::from("test secret".to_string())),
             }
         }
     }

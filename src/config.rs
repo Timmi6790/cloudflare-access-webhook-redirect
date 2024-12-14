@@ -1,11 +1,10 @@
 use crate::data::{AllowedPath, AllowedPaths};
+use crate::error::Error;
 use reqwest::Url;
-use secrecy::Secret;
+use secrecy::SecretString;
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
-
-use crate::error::Error;
 
 const DEFAULT_SERVER_HOST: &str = "127.0.0.1";
 const DEFAULT_SERVER_PORT: u16 = 8080;
@@ -21,8 +20,8 @@ pub struct Config {
 #[derive(Debug, serde::Deserialize, Getters)]
 #[getset(get = "pub")]
 pub struct CloudFlareConfig {
-    client_id: Secret<String>,
-    client_secret: Secret<String>,
+    client_id: SecretString,
+    client_secret: SecretString,
 }
 
 #[derive(Debug, serde::Deserialize, Getters)]
