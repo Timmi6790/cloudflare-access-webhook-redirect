@@ -2,7 +2,7 @@ use crate::converter::{ActixToReqwestConverter, ReqwestToActixConverter};
 use crate::data::WebHookData;
 use actix_web::http::Method;
 use actix_web::web::Query;
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, web};
 use reqwest::{Body, Url};
 use reqwest_middleware::{ClientWithMiddleware, RequestBuilder};
 use std::collections::HashMap;
@@ -170,9 +170,9 @@ impl<'a> ReqwestBuilder<'a> {
 mod tests {
     use super::*;
     use crate::config::AllowedMethod;
-    use actix_web::{test, App};
+    use actix_web::{App, test};
     use reqwest_middleware::ClientBuilder;
-    use secrecy::Secret;
+    use secrecy::SecretString;
     use std::collections::HashSet;
     use wiremock::{Mock, ResponseTemplate};
 
@@ -219,8 +219,8 @@ mod tests {
                 client,
                 target,
                 allowed_paths,
-                Secret::new("access-id".to_string()),
-                Secret::new("access-secret".to_string()),
+                SecretString::new(Box::from("access-id")),
+                SecretString::new(Box::from("access-secret")),
             )
             .unwrap();
 
