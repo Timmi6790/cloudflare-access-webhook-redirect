@@ -100,7 +100,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Annotate commit with clippy warnings
-        uses: clechasseur/rs-clippy-check@v3
+        uses: clechasseur/rs-clippy-check@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
