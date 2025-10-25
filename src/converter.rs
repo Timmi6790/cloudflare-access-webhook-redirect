@@ -34,12 +34,11 @@ impl ActixToReqwestConverter {
             .iter()
             .filter(|(key, _)| ActixToReqwestConverter::is_valid_header_name(key.as_str()))
             .for_each(|(key, value)| {
-                if let Ok(value) = reqwest::header::HeaderValue::from_bytes(value.as_bytes()) {
-                    if let Ok(key) =
+                if let Ok(value) = reqwest::header::HeaderValue::from_bytes(value.as_bytes())
+                    && let Ok(key) =
                         reqwest::header::HeaderName::from_bytes(key.as_str().as_bytes())
-                    {
-                        target_headers.append(key, value);
-                    }
+                {
+                    target_headers.append(key, value);
                 }
             });
 

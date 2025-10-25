@@ -6,12 +6,12 @@ use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use sentry::ClientInitGuard;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{filter, Layer};
+use tracing_subscriber::{Layer, filter};
 
+use cloudflare_access_webhook_redirect::Result;
 use cloudflare_access_webhook_redirect::config::Config;
 use cloudflare_access_webhook_redirect::data::WebHookData;
 use cloudflare_access_webhook_redirect::server::Server;
-use cloudflare_access_webhook_redirect::Result;
 
 #[macro_use]
 extern crate tracing;
@@ -64,7 +64,7 @@ fn setup_tracing() -> Result<()> {
 }
 
 fn setup_sentry() -> Option<ClientInitGuard> {
-    return match env::var(ENV_SENTRY_DSN) {
+    match env::var(ENV_SENTRY_DSN) {
         Ok(dns) => Some(sentry::init((
             dns,
             sentry::ClientOptions {
@@ -75,7 +75,7 @@ fn setup_sentry() -> Option<ClientInitGuard> {
         ))),
         Err(_) => {
             info!("{ENV_SENTRY_DSN} not set, skipping Sentry setup");
-            return None;
+            None
         }
-    };
+    }
 }
