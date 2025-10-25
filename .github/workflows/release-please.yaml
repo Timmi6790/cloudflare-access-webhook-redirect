@@ -39,7 +39,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@032a4b3bda1b716928481836ac5bfe36e1feaad6
+        uses: docker/metadata-action@v5
         if: ${{ steps.release.outputs.release_created }}
         with:
           images: timmi6790/cloudflare-access-webhook-redirect
