@@ -1,6 +1,6 @@
 use crate::data::{AllowedPath, AllowedPaths};
 use reqwest::Url;
-use secrecy::Secret;
+use secrecy::SecretString;
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -21,8 +21,8 @@ pub struct Config {
 #[derive(Debug, serde::Deserialize, Getters)]
 #[getset(get = "pub")]
 pub struct CloudFlareConfig {
-    client_id: Secret<String>,
-    client_secret: Secret<String>,
+    client_id: SecretString,
+    client_secret: SecretString,
 }
 
 #[derive(Debug, serde::Deserialize, Getters)]
@@ -299,9 +299,11 @@ mod tests_try_from {
         let allowed_path: crate::config::AllowedPath = set.try_into().unwrap();
         assert!(!allowed_path.all());
         assert_eq!(allowed_path.methods().len(), 1);
-        assert!(allowed_path
-            .methods()
-            .contains(&actix_web::http::Method::GET));
+        assert!(
+            allowed_path
+                .methods()
+                .contains(&actix_web::http::Method::GET)
+        );
     }
 
     #[test]

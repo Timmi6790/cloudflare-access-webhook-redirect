@@ -1,7 +1,7 @@
+use crate::Result;
 use crate::data::WebHookData;
 use crate::routes::{health_check, redirect};
-use crate::Result;
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer, web};
 use derive_new::new;
 use tracing_actix_web::TracingLogger;
 
