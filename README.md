@@ -85,6 +85,7 @@ The proxy acts as an intermediary that:
 
 ```bash
 docker run -p 8080:8080 \
+  -e SERVER.HOST=0.0.0.0 \
   -e CLOUDFLARE.CLIENT_ID=your-client-id \
   -e CLOUDFLARE.CLIENT_SECRET=your-client-secret \
   -e WEBHOOK.TARGET_BASE=https://your-protected-service.com \
@@ -101,6 +102,7 @@ docker run -d \
   --name cf-webhook-redirect \
   --restart unless-stopped \
   -p 8080:8080 \
+  -e SERVER.HOST=0.0.0.0 \
   -e CLOUDFLARE.CLIENT_ID=your-client-id \
   -e CLOUDFLARE.CLIENT_SECRET=your-client-secret \
   -e WEBHOOK.TARGET_BASE=https://your-protected-service.com \
@@ -120,6 +122,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SERVER.HOST=0.0.0.0
       - CLOUDFLARE.CLIENT_ID=your-client-id
       - CLOUDFLARE.CLIENT_SECRET=your-client-secret
       - WEBHOOK.TARGET_BASE=https://your-protected-service.com
