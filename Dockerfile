@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.19
 
 FROM lukemathwalker/cargo-chef:latest-rust-alpine AS chef
-RUN apk add --no-cache musl-dev pkgconfig openssl-dev openssl-libs-static upx
+RUN apk add --no-cache musl-dev pkgconfig openssl-dev openssl-libs-static upx curl jq
 # Install sentry-cli
 RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/getsentry/sentry-cli/releases/latest | jq -r .tag_name) && \
     wget -qO /usr/local/bin/sentry-cli "https://downloads.sentry-cdn.com/sentry-cli/${LATEST_VERSION}/sentry-cli-Linux-x86_64" && \
