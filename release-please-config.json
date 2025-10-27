@@ -3,5 +3,10 @@
   "release-type": "rust",
   "include-component-in-tag": false,
   "packages": {
+    ".": {
+      "release-type": "rust",
+      "include-component-in-tag": false,
+      "changelogPath": "CHANGELOG.md"
+    }
   }
 }
