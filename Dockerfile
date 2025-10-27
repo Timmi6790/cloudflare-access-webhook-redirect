@@ -71,8 +71,8 @@ LABEL org.opencontainers.image.version="${version}" \
 
 COPY --from=env  /etc/passwd /etc/passwd
 COPY --from=env  /etc/group /etc/group
-COPY --from=env  --chmod=444 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=env  --chmod=444 /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=env  /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=env  /usr/share/zoneinfo /usr/share/zoneinfo
 
 WORKDIR /app
 COPY --from=builder --chmod=555 /app/target/x86_64-unknown-linux-musl/release/cloudflare-access-webhook-redirect ./app
