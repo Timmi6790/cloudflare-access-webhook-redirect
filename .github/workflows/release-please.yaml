@@ -14,9 +14,6 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
-        with:
-          release-type: rust
-          include-v-in-tag: false
       # Docker Image release
       - name: Checkout
         uses: actions/checkout@v5
