@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.3.0...v0.3.1) (2025-10-27)
+
+
+### Bug Fixes
+
+* fix dockerfile sentry upload ([#126](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/issues/126)) ([e056fa7](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/e056fa752b1dd887e0f9e7e1fcf87aa57f2c4790))
+
 ## [0.3.0](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.2.10...v0.3.0) (2025-10-27)
 
 
