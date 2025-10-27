@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.3.1...v0.3.2) (2025-10-27)
+
+
+### Bug Fixes
+
+* merge sentry release into release please action ([#128](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/issues/128)) ([e7eaec8](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/e7eaec88f2ea57069b35647ead83928ed18910a6))
+
 ## [0.3.1](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.3.0...v0.3.1) (2025-10-27)
 
 
