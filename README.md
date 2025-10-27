@@ -85,11 +85,10 @@ The proxy acts as an intermediary that:
 
 ```bash
 docker run -p 8080:8080 \
-  -e LISTEN_ADDR=0.0.0.0:8080 \
-  -e TARGET_URL=https://your-protected-service.com \
-  -e CLOUDFLARE_ACCESS_CLIENT_ID=your-client-id \
-  -e CLOUDFLARE_ACCESS_CLIENT_SECRET=your-client-secret \
-  -e PATHS="/webhook/.*,/api/public/.*" \
+  -e CLOUDFLARE.CLIENT_ID=your-client-id \
+  -e CLOUDFLARE.CLIENT_SECRET=your-client-secret \
+  -e WEBHOOK.TARGET_BASE=https://your-protected-service.com \
+  -e WEBHOOK.PATHS="/webhook/.*:ALL; /api/public/.*:POST" \
   timmi6790/cloudflare-access-webhook-redirect
 ```
 
@@ -102,11 +101,10 @@ docker run -d \
   --name cf-webhook-redirect \
   --restart unless-stopped \
   -p 8080:8080 \
-  -e LISTEN_ADDR=0.0.0.0:8080 \
-  -e TARGET_URL=https://your-protected-service.com \
-  -e CLOUDFLARE_ACCESS_CLIENT_ID=your-client-id \
-  -e CLOUDFLARE_ACCESS_CLIENT_SECRET=your-client-secret \
-  -e PATHS="/webhook/.*,/api/public/.*" \
+  -e CLOUDFLARE.CLIENT_ID=your-client-id \
+  -e CLOUDFLARE.CLIENT_SECRET=your-client-secret \
+  -e WEBHOOK.TARGET_BASE=https://your-protected-service.com \
+  -e WEBHOOK.PATHS="/webhook/.*:ALL; /api/public/.*:POST" \
   timmi6790/cloudflare-access-webhook-redirect
 ```
 
@@ -122,11 +120,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - LISTEN_ADDR=0.0.0.0:8080
-      - TARGET_URL=https://your-protected-service.com
-      - CLOUDFLARE_ACCESS_CLIENT_ID=your-client-id
-      - CLOUDFLARE_ACCESS_CLIENT_SECRET=your-client-secret
-      - PATHS=/webhook/.*,/api/public/.*
+      - CLOUDFLARE.CLIENT_ID=your-client-id
+      - CLOUDFLARE.CLIENT_SECRET=your-client-secret
+      - WEBHOOK.TARGET_BASE=https://your-protected-service.com
+      - WEBHOOK.PATHS=/webhook/.*:ALL; /api/public/.*:POST
       - LOG_LEVEL=info
 ```
 
@@ -154,22 +151,20 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            - name: LISTEN_ADDR
-              value: "0.0.0.0:8080"
-            - name: TARGET_URL
+            - name: WEBHOOK.TARGET_BASE
               value: "https://your-protected-service.com"
-            - name: CLOUDFLARE_ACCESS_CLIENT_ID
+            - name: CLOUDFLARE.CLIENT_ID
               valueFrom:
                 secretKeyRef:
                   name: cf-access-credentials
                   key: client-id
-            - name: CLOUDFLARE_ACCESS_CLIENT_SECRET
+            - name: CLOUDFLARE.CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: cf-access-credentials
                   key: client-secret
-            - name: PATHS
-              value: "/webhook/.*,/api/public/.*"
+            - name: WEBHOOK.PATHS
+              value: "/webhook/.*:ALL; /api/public/.*:POST"
           livenessProbe:
             httpGet:
               path: /health
@@ -213,15 +208,14 @@ repository.
 
 ### Environment Variables
 
-| Variable                          | Required | Default | Description                                                 |
-|-----------------------------------|----------|---------|-------------------------------------------------------------|
-| `LISTEN_ADDR`                     | Yes      | -       | Address and port to listen on (e.g., `0.0.0.0:8080`)        |
-| `TARGET_URL`                      | Yes      | -       | URL of your Cloudflare Access protected service             |
-| `CLOUDFLARE_ACCESS_CLIENT_ID`     | Yes      | -       | Cloudflare Access Client ID                                 |
-| `CLOUDFLARE_ACCESS_CLIENT_SECRET` | Yes      | -       | Cloudflare Access Client Secret                             |
-| `PATHS`                           | Yes      | -       | Comma-separated list of regex patterns for paths to forward |
-| `LOG_LEVEL`                       | No       | `info`  | Log level (`debug`, `info`, `warn`, `error`)                |
-| `SENTRY_DSN`                      | No       | -       | Sentry DSN for error tracking                               |
+| Variable                   | Required | Default | Description                                                                                                               |
+|----------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------|
+| `CLOUDFLARE.CLIENT_ID`     | Yes      | -       | Cloudflare Access Client ID                                                                                               |
+| `CLOUDFLARE.CLIENT_SECRET` | Yes      | -       | Cloudflare Access Client Secret                                                                                           |
+| `WEBHOOK.TARGET_BASE`      | Yes      | -       | URL of your Cloudflare Access protected service                                                                           |
+| `WEBHOOK.PATHS`            | Yes      | -       | Semicolon-space-separated list of path patterns in format `<regex>:<methods>` (e.g., `/webhook/.*:ALL; /api/.*:POST,GET`) |
+| `LOG_LEVEL`                | No       | `info`  | Log level (`debug`, `info`, `warn`, `error`)                                                                              |
+| `SENTRY_DSN`               | No       | -       | Sentry DSN for error tracking                                                                                             |
 
 ## 🤝 Contributing
 
