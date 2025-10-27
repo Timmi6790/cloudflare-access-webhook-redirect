@@ -61,3 +61,8 @@ jobs:
           build-args: |
             version=${{ steps.release.outputs.tag_name }}
             release=${{ steps.release.outputs.tag_name }}
+            vendor=Timmi6790
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+            VERSION=${{ steps.release.outputs.tag_name }}
