@@ -20,14 +20,14 @@ COPY  . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 # Upload debug symbols to Sentry before stripping
-ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 ARG VERSION
 
-RUN if [ -n "$SENTRY_AUTH_TOKEN" ]; then \
+RUN --mount=type=secret,id=sentry_token \
+    if [ -f /run/secrets/sentry_token ]; then \
         sentry-cli debug-files upload \
-            --auth-token ${SENTRY_AUTH_TOKEN} \
+            --auth-token $(cat /run/secrets/sentry_token) \
             --org ${SENTRY_ORG} \
             --project ${SENTRY_PROJECT} \
             --include-sources \
