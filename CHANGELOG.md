@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.3.2...v0.3.3) (2025-10-27)
+
+
+### Bug Fixes
+
+* **Docker:** SSL cert  ([#130](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/issues/130)) ([f4d3e1b](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/f4d3e1bf9449e673458daf7ac2eec8be45adec87))
+
 ## [0.3.2](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.3.1...v0.3.2) (2025-10-27)
 
 
