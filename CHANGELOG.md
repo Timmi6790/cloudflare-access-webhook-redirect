@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.2.10...v0.3.0) (2025-10-27)
+
+
+### Features
+
+* update dependencies & rust version to 2014 ([#117](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/issues/117)) ([556518d](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/556518d2caed1404ed777f96b809a622c42816e6))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate thiserror to v2 ([#91](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/issues/91)) ([f92d2b7](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/commit/f92d2b7d9a5383cb87d0eac8af095e4dd23e6bd8))
+
 ## [0.2.10](https://github.com/Timmi6790/cloudflare-access-webhook-redirect/compare/v0.2.9...v0.2.10) (2024-09-07)
 
 
