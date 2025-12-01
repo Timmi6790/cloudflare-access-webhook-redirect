@@ -16,7 +16,7 @@ jobs:
         id: release
       # Docker Image release
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         if: ${{ steps.release.outputs.release_created }}
 
       - name: Set up QEMU
