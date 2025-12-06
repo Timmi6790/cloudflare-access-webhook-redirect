@@ -45,7 +45,7 @@ jobs:
             type=raw,value=latest
 
       - name: Sentry Release
-        uses: getsentry/action-release@v3.3.0
+        uses: getsentry/action-release@v3.4.0
         if: ${{ steps.release.outputs.release_created }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
